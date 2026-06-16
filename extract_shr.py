@@ -374,8 +374,40 @@ def parse_shr_pdf(pdf_path: str) -> list[dict[str, Any]]:
     )
 
 
+def aggregate_records(records: list[dict]) -> list[dict]:
+    """
+    Collapse per-serial records into one row per (lin, nsn) group.
+
+    Each group has: lin, nsn_description, nsn, oh_qty (total), serials (list),
+    unit, date.  The raw one-per-serial records remain available via parse_shr_pdf.
+    """
+    groups: dict = {}
+    order: list = []
+
+    for r in records:
+        key = (r['lin'], r['nsn'])
+        if key not in groups:
+            groups[key] = {
+                'lin':             r['lin'],
+                'nsn':             r['nsn'],
+                'nsn_description': r['nsn_description'],
+                'oh_qty':          0,
+                'serials':         [],
+                'unit':            r['unit'],
+                'date':            r['date'],
+            }
+            order.append(key)
+        g = groups[key]
+        g['oh_qty'] += 1
+        sn = r['serial_number']
+        if sn and sn not in g['serials']:
+            g['serials'].append(sn)
+
+    return [groups[k] for k in order]
+
+
 def to_csv(records: list[dict]) -> str:
-    """Convert records list to CSV string."""
+    """Convert per-serial records list to CSV string."""
     if not records:
         return ''
     buf = io.StringIO()
@@ -383,6 +415,20 @@ def to_csv(records: list[dict]) -> str:
     writer = csv.DictWriter(buf, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(records)
+    return buf.getvalue()
+
+
+def to_csv_aggregated(records: list[dict]) -> str:
+    """Convert aggregated records to CSV with serial numbers comma-joined."""
+    agg = aggregate_records(records)
+    if not agg:
+        return ''
+    buf = io.StringIO()
+    fieldnames = ['lin', 'nsn', 'nsn_description', 'oh_qty', 'serials', 'unit', 'date']
+    writer = csv.DictWriter(buf, fieldnames=fieldnames)
+    writer.writeheader()
+    for row in agg:
+        writer.writerow({**row, 'serials': ', '.join(row['serials'])})
     return buf.getvalue()
 
 

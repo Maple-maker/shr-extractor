@@ -11,7 +11,7 @@ import tempfile
 
 from flask import Flask, jsonify, render_template, request, Response, session
 
-from extract_shr import parse_shr_pdf, to_csv
+from extract_shr import parse_shr_pdf, to_csv, to_csv_aggregated, aggregate_records
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'shr-extractor-dev')
@@ -52,18 +52,31 @@ def extract():
             pass
 
     _last_records = records
-    return render_template('results.html', records=records, count=len(records))
+    agg = aggregate_records(records)
+    return render_template('results.html', records=agg, raw_count=len(records), count=len(agg))
 
 
 @app.route('/download/csv')
 def download_csv():
     if not _last_records:
         return "No data. Upload a PDF first.", 400
-    csv_data = to_csv(_last_records)
+    csv_data = to_csv_aggregated(_last_records)
     return Response(
         csv_data,
         mimetype='text/csv',
         headers={'Content-Disposition': 'attachment; filename=shr_extract.csv'}
+    )
+
+
+@app.route('/download/csv/full')
+def download_csv_full():
+    if not _last_records:
+        return "No data. Upload a PDF first.", 400
+    csv_data = to_csv(_last_records)
+    return Response(
+        csv_data,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=shr_extract_full.csv'}
     )
 
 

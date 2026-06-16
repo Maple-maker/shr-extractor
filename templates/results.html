@@ -34,10 +34,11 @@
   <div class="header">
     <div>
       <h1>SHR Extraction Results</h1>
-      <div class="count">{{ count }} records found</div>
+      <div class="count">{{ count }} line items ({{ raw_count }} individual serials)</div>
     </div>
     <div class="actions">
-      <a href="/download/csv" class="btn btn-primary">Download CSV</a>
+      <a href="/download/csv" class="btn btn-primary">Download CSV (Aggregated)</a>
+      <a href="/download/csv/full" class="btn btn-secondary">Download CSV (Per Serial)</a>
       <a href="/download/json" class="btn btn-secondary">Download JSON</a>
       <a href="/" class="btn btn-outline">Upload Another</a>
     </div>
@@ -53,11 +54,10 @@
         <tr>
           <th>#</th>
           <th>LIN</th>
-          <th>MPO Description</th>
           <th>NSN</th>
-          <th>NSN Description</th>
-          <th>OH QTY</th>
-          <th>Serial Number</th>
+          <th>Description</th>
+          <th>QTY</th>
+          <th>Serial Numbers</th>
         </tr>
       </thead>
       <tbody>
@@ -65,11 +65,10 @@
         <tr>
           <td>{{ loop.index }}</td>
           <td>{{ r.lin }}</td>
-          <td class="desc">{{ r.mpo_description }}</td>
           <td>{{ r.nsn }}</td>
           <td class="desc">{{ r.nsn_description }}</td>
           <td>{{ r.oh_qty }}</td>
-          <td>{{ r.serial_number }}</td>
+          <td class="desc">{{ r.serials | join(', ') }}</td>
         </tr>
         {% endfor %}
       </tbody>
