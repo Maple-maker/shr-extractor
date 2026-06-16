@@ -3,376 +3,293 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SHR Command Dashboard Preparation</title>
+  <title>SHR Command Dashboard Ready</title>
   <style>
     :root {
-      color-scheme: light;
       --bg-canvas: #f3f1ea;
       --bg-panel: #fbf8f1;
-      --bg-panel-strong: #e5dfd0;
       --ink-strong: #1f2a2e;
       --ink-body: #344248;
       --ink-muted: #66757c;
       --line-subtle: #c7c0b1;
-      --line-strong: #8f866f;
       --accent-command: #2f5d50;
       --accent-command-strong: #1f4339;
-      --accent-attention: #b15b2d;
-      --accent-info: #315f7d;
-      --shadow: 0 14px 32px rgba(54, 45, 32, 0.08);
-      --motion-fast: 140ms ease;
+      --accent-danger: #8f2d23;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
 
     body {
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      background:
-        linear-gradient(180deg, rgba(229, 223, 208, 0.72), rgba(243, 241, 234, 0.95) 24%, #f7f4ec 100%);
-      color: var(--ink-body);
+      margin: 0;
       min-height: 100vh;
-      padding: 26px 18px 32px;
+      padding: 24px;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #f8f5ee 0%, var(--bg-canvas) 100%);
+      color: var(--ink-body);
+    }
+
+    h1, h2 {
+      margin: 0;
+      color: var(--ink-strong);
+      font-family: Georgia, "Times New Roman", serif;
     }
 
     .shell {
-      max-width: 1240px;
+      max-width: 1280px;
       margin: 0 auto;
-    }
-
-    .header {
-      margin-bottom: 18px;
       display: grid;
-      grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
       gap: 18px;
-      align-items: stretch;
     }
 
+    .hero,
     .panel {
-      background: linear-gradient(180deg, rgba(251, 248, 241, 0.98), rgba(245, 239, 227, 0.98));
       border: 1px solid var(--line-subtle);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(251, 248, 241, 0.94);
+      box-shadow: 0 18px 40px rgba(31, 42, 46, 0.08);
     }
 
     .hero {
-      padding: 22px 24px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);
+    }
+
+    .hero-copy,
+    .hero-side,
+    .panel-header,
+    .panel-body {
+      padding: 22px;
+    }
+
+    .hero-copy {
+      background: linear-gradient(180deg, rgba(229, 223, 208, 0.38), rgba(251, 248, 241, 0));
     }
 
     .eyebrow {
       color: var(--accent-command);
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       font-weight: 700;
       text-transform: uppercase;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
 
-    h1 {
-      font-family: Georgia, "Times New Roman", serif;
-      color: var(--ink-strong);
-      font-size: 1.9rem;
-      line-height: 1.1;
+    .hero-copy p,
+    .panel-header p,
+    .hero-side p {
+      margin: 10px 0 0;
+      color: var(--ink-muted);
+      line-height: 1.5;
     }
 
-    .count {
-      margin-top: 10px;
-      color: var(--ink-body);
-      font-size: 0.96rem;
-      line-height: 1.45;
-      max-width: 58ch;
+    .hero-side {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      background: linear-gradient(180deg, rgba(47, 93, 80, 0.08), rgba(255, 255, 255, 0.2));
+      border-left: 1px solid rgba(199, 192, 177, 0.8);
     }
 
-    .count strong {
-      color: var(--ink-strong);
-      font-family: Consolas, "Courier New", monospace;
+    .warning {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(143, 45, 35, 0.18);
+      background: rgba(143, 45, 35, 0.08);
+      color: var(--accent-danger);
+      font-size: 0.88rem;
     }
 
-    .summary {
+    .stat-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      padding: 18px;
-      background:
-        linear-gradient(180deg, rgba(229, 223, 208, 0.55), rgba(251, 248, 241, 0.92));
+      gap: 12px;
+      margin-top: 18px;
     }
 
-    .summary-item {
-      padding: 12px;
-      border-radius: 7px;
-      border: 1px solid var(--line-subtle);
-      background: rgba(255, 255, 255, 0.62);
+    .stat-card {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(199, 192, 177, 0.8);
+      background: rgba(255, 255, 255, 0.72);
     }
 
-    .summary-item strong {
+    .stat-card strong {
       display: block;
-      font-family: Georgia, "Times New Roman", serif;
       color: var(--ink-strong);
-      font-size: 1.22rem;
-      margin-bottom: 4px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 1.6rem;
     }
 
-    .summary-item span {
-      font-size: 0.8rem;
+    .stat-card span {
+      display: block;
+      margin-top: 4px;
       color: var(--ink-muted);
-      text-transform: uppercase;
-    }
-
-    .workspace {
-      display: grid;
-      gap: 18px;
+      font-size: 0.86rem;
     }
 
     .actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      align-content: start;
-      padding: 18px;
+      margin-top: 18px;
     }
 
-    .btn {
+    .button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
       min-height: 42px;
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      cursor: pointer;
-      text-decoration: none;
+      padding: 0 16px;
+      border-radius: 10px;
       border: 1px solid transparent;
-      transition: transform var(--motion-fast), background-color var(--motion-fast), border-color var(--motion-fast);
-    }
-
-    .btn:hover { transform: translateY(-1px); }
-
-    .btn:focus-visible,
-    input[type="text"]:focus-visible {
-      outline: 3px solid rgba(196, 138, 24, 0.58);
-      outline-offset: 2px;
-    }
-
-    .btn-primary {
-      background: linear-gradient(180deg, var(--accent-command), var(--accent-command-strong));
-      color: #f8f4eb;
-      border-color: var(--accent-command-strong);
-    }
-
-    .btn-secondary {
-      background: #e7ece8;
-      color: var(--ink-strong);
-      border-color: var(--line-subtle);
-    }
-
-    .btn-outline {
-      background: transparent;
-      border-color: var(--line-strong);
-      color: var(--ink-body);
-    }
-
-    .search-bar {
-      padding: 18px;
-    }
-
-    .status-note {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(49, 95, 125, 0.18);
-      background: rgba(49, 95, 125, 0.08);
-      color: #294e67;
-      font-size: 0.83rem;
-    }
-
-    .status-note::before {
-      content: "i";
-      width: 18px;
-      height: 18px;
-      display: inline-grid;
-      place-items: center;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(49, 95, 125, 0.24);
+      text-decoration: none;
       font-weight: 700;
-      font-family: Georgia, "Times New Roman", serif;
+      transition: background 140ms ease, transform 140ms ease;
     }
 
-    input[type="text"] {
+    .button:hover { transform: translateY(-1px); }
+    .button-primary { background: var(--accent-command); color: #fff; }
+    .button-primary:hover { background: var(--accent-command-strong); }
+    .button-secondary { background: rgba(255, 255, 255, 0.82); color: var(--ink-strong); border-color: var(--line-subtle); }
+
+    .panel-header {
+      border-bottom: 1px solid rgba(199, 192, 177, 0.8);
+      background: linear-gradient(180deg, rgba(229, 223, 208, 0.28), rgba(251, 248, 241, 0));
+    }
+
+    .search {
       width: 100%;
-      padding: 11px 14px;
-      border-radius: 6px;
-      border: 1px solid var(--line-strong);
-      background: rgba(255, 255, 255, 0.86);
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line-subtle);
+      background: rgba(255, 255, 255, 0.9);
       color: var(--ink-strong);
-      font-size: 0.92rem;
+      margin-bottom: 16px;
     }
 
     .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--line-subtle);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.72);
+      overflow: auto;
+      border: 1px solid rgba(199, 192, 177, 0.82);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.78);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.86rem;
-      min-width: 860px;
-    }
+    table { width: 100%; border-collapse: collapse; }
 
     thead th {
       position: sticky;
       top: 0;
-      background: #ddd5c2;
-      color: var(--ink-strong);
-      padding: 11px 12px;
+      padding: 12px 14px;
+      background: #f1ecdf;
       text-align: left;
-      white-space: nowrap;
-      font-size: 0.75rem;
+      font-size: 0.78rem;
       text-transform: uppercase;
-      letter-spacing: 0;
-      border-bottom: 1px solid var(--line-strong);
-    }
-
-    tbody tr:nth-child(even) { background: rgba(237, 231, 218, 0.42); }
-    tbody tr:hover { background: rgba(47, 93, 80, 0.08); }
-
-    td {
-      padding: 9px 12px;
-      border-bottom: 1px solid rgba(199, 192, 177, 0.78);
-      white-space: nowrap;
-      vertical-align: top;
-      color: var(--ink-body);
-    }
-
-    td:first-child,
-    td:nth-child(2),
-    td:nth-child(3),
-    td:nth-child(5) {
-      font-family: Consolas, "Courier New", monospace;
       color: var(--ink-strong);
+      border-bottom: 1px solid rgba(199, 192, 177, 0.9);
     }
 
-    td.desc {
-      white-space: normal;
-      max-width: 320px;
-      line-height: 1.42;
-    }
-
-    .hint {
-      color: var(--ink-muted);
-      font-size: 0.82rem;
-      padding: 12px 2px 0;
-      line-height: 1.45;
-    }
+    tbody tr:nth-child(even) { background: rgba(229, 223, 208, 0.20); }
+    tbody tr:hover { background: rgba(229, 223, 208, 0.42); }
+    td { padding: 12px 14px; border-bottom: 1px solid rgba(199, 192, 177, 0.55); vertical-align: top; }
+    .mono { font-family: Consolas, "Courier New", monospace; }
+    .desc { max-width: 340px; }
 
     @media (max-width: 980px) {
-      .header {
-        grid-template-columns: 1fr;
-      }
-
-      .summary {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
-        animation: none !important;
-        transition: none !important;
-        scroll-behavior: auto !important;
-      }
+      .hero { grid-template-columns: 1fr; }
+      .hero-side { border-left: 0; border-top: 1px solid rgba(199, 192, 177, 0.8); }
+      .stat-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
-    <section class="header">
-      <div class="panel hero">
-        <p class="eyebrow">Extraction Complete</p>
-        <h1>Dashboard payload prepared for command review.</h1>
-        <div class="count">
-          <strong>{{ count }}</strong> aggregated line items and <strong>{{ raw_count }}</strong> individual serial records are ready for export into the offline command dashboard.
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">Extraction complete</div>
+        <h1>Command dashboard is ready for export</h1>
+        <p>{{ dashboard_count }} serial-level items are prepared for the offline dashboard. Use the HTML dashboard as the daily working document, then keep the CSV and JSON outputs for reporting or archival support.</p>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <strong>{{ dashboard_count }}</strong>
+            <span>Serial-level dashboard items</span>
+          </div>
+          <div class="stat-card">
+            <strong>{{ raw_count }}</strong>
+            <span>Source serial records</span>
+          </div>
+          <div class="stat-card">
+            <strong>{{ count }}</strong>
+            <span>Aggregated line items</span>
+          </div>
+        </div>
+        <div class="actions">
+          <a href="/download/dashboard" class="button button-primary">Download Command Dashboard HTML</a>
+          <a href="/download/csv/full" class="button button-secondary">Download Per-Serial CSV</a>
+          <a href="/download/json" class="button button-secondary">Download JSON</a>
         </div>
       </div>
-
-      <div class="panel summary" aria-label="Extraction summary">
-        <div class="summary-item">
-          <strong>{{ count }}</strong>
-          <span>Line items</span>
+      <div class="hero-side">
+        <div class="warning">Saved HTML contains property accountability data and commander notes. Store it accordingly.</div>
+        <div>
+          <h2>What the exported dashboard includes</h2>
+          <p>Exception summaries, inventory search, grouped assignee and location views, labels and status pivots, plus a serial-level review drawer.</p>
         </div>
-        <div class="summary-item">
-          <strong>{{ raw_count }}</strong>
-          <span>Serial records</span>
+        <div>
+          <h2>What stays here</h2>
+          <p>The Flask app remains the local ingestion tool. The exported HTML is the commander-facing artifact that can be reopened without a server.</p>
         </div>
-        <div class="summary-item">
-          <strong>{{ dashboard_count or raw_count }}</strong>
-          <span>Dashboard rows</span>
+        <div class="actions">
+          <a href="/download/csv" class="button button-secondary">Download Aggregated CSV</a>
+          <a href="/" class="button button-secondary">Upload Another SHR</a>
         </div>
       </div>
     </section>
 
-    <section class="workspace">
-      <div class="panel actions">
-        <a href="/download/dashboard" class="btn btn-primary">Download Dashboard HTML</a>
-        <a href="/download/csv" class="btn btn-secondary">Aggregated CSV</a>
-        <a href="/download/csv/full" class="btn btn-secondary">Per-Serial CSV</a>
-        <a href="/download/json" class="btn btn-secondary">Raw JSON</a>
-        <a href="/" class="btn btn-outline">Upload Another SHR</a>
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Aggregated extraction view</h2>
+        <p>This remains available for quick validation and reporting while the exported dashboard becomes the daily accountability surface.</p>
       </div>
-
-      <div class="panel search-bar">
-        {% if dashboard_count %}
-        <div class="status-note">Offline dashboard export is ready for {{ dashboard_count }} serial-item records.</div>
-        {% endif %}
-        <input type="text" id="search" placeholder="Filter by LIN, NSN, serial number, or description..." oninput="filterTable()">
-        <p class="hint">Use this review pass to spot obvious extraction issues before handing the file to the full command dashboard workflow.</p>
-      </div>
-
-      <div class="table-wrap">
-        <table id="resultsTable">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>LIN</th>
-              <th>NSN</th>
-              <th>Description</th>
-              <th>QTY</th>
-              <th>Serial Numbers</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for r in records %}
-            <tr>
-              <td>{{ loop.index }}</td>
-              <td>{{ r.lin }}</td>
-              <td>{{ r.nsn }}</td>
-              <td class="desc">{{ r.nsn_description }}</td>
-              <td>{{ r.oh_qty }}</td>
-              <td class="desc">{{ r.serials | join(', ') }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      <div class="panel-body">
+        <input id="search" class="search" type="search" placeholder="Filter by LIN, NSN, serial number, or description...">
+        <div class="table-wrap">
+          <table id="resultsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>LIN</th>
+                <th>NSN</th>
+                <th>Description</th>
+                <th>QTY</th>
+                <th>Serial Numbers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in records %}
+              <tr>
+                <td>{{ loop.index }}</td>
+                <td class="mono">{{ r.lin }}</td>
+                <td class="mono">{{ r.nsn }}</td>
+                <td class="desc">{{ r.nsn_description }}</td>
+                <td class="mono">{{ r.oh_qty }}</td>
+                <td class="desc mono">{{ r.serials | join(', ') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </div>
 
   <script>
-    function filterTable() {
-      const q = document.getElementById('search').value.toLowerCase();
-      const rows = document.querySelectorAll('#resultsTable tbody tr');
-      rows.forEach(row => {
-        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    document.getElementById('search').addEventListener('input', function () {
+      const query = this.value.toLowerCase();
+      document.querySelectorAll('#resultsTable tbody tr').forEach(function (row) {
+        row.style.display = row.textContent.toLowerCase().includes(query) ? '' : 'none';
       });
-    }
+    });
   </script>
 </body>
 </html>

@@ -4,12 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light">
-  <title>SHR Command Dashboard</title>
+  <title>{{ title or "SHR Command Dashboard" }}</title>
   <style>
     :root {
       --bg-canvas: #f3f1ea;
       --bg-panel: #fbf8f1;
       --bg-panel-strong: #e5dfd0;
+      --bg-band: #ede7da;
       --ink-strong: #1f2a2e;
       --ink-body: #344248;
       --ink-muted: #66757c;
@@ -19,20 +20,21 @@
       --accent-command-strong: #1f4339;
       --accent-attention: #b15b2d;
       --accent-danger: #8f2d23;
+      --accent-warning: #c48a18;
       --accent-info: #315f7d;
       --status-ok: #567a35;
       --focus: #b15b2d;
       --font-heading: Georgia, "Times New Roman", serif;
       --font-ui: "Trebuchet MS", "Segoe UI", sans-serif;
       --font-data: Consolas, "Courier New", monospace;
+      --shadow-soft: 0 18px 40px rgba(31, 42, 46, 0.08);
     }
 
     * { box-sizing: border-box; }
-
     html, body { margin: 0; min-height: 100%; }
 
     body {
-      background: var(--bg-canvas);
+      background: linear-gradient(180deg, #f8f5ee 0%, var(--bg-canvas) 100%);
       color: var(--ink-body);
       font-family: var(--font-ui);
       font-size: 15px;
@@ -45,27 +47,12 @@
       font: inherit;
     }
 
-    button {
-      min-height: 36px;
-      border: 1px solid var(--line-strong);
-      border-radius: 6px;
-      padding: 7px 11px;
-      background: var(--bg-panel);
-      color: var(--ink-strong);
-      cursor: pointer;
-    }
-
-    button:hover { border-color: var(--accent-command); }
-
-    button.primary {
-      background: var(--accent-command);
-      border-color: var(--accent-command);
-      color: #fff;
-    }
-
-    button.danger {
-      border-color: var(--accent-danger);
-      color: var(--accent-danger);
+    button,
+    input,
+    select,
+    textarea,
+    [tabindex] {
+      outline: none;
     }
 
     :focus-visible {
@@ -73,214 +60,520 @@
       outline-offset: 2px;
     }
 
+    .skip-link {
+      position: absolute;
+      left: 12px;
+      top: -48px;
+      background: var(--accent-command-strong);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 8px;
+      z-index: 50;
+      text-decoration: none;
+    }
+
+    .skip-link:focus {
+      top: 12px;
+    }
+
     .shell {
-      min-height: 100vh;
       display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .command-bar,
+    .privacy,
+    .main-panel,
+    .drawer {
+      border: 1px solid var(--line-subtle);
+      background: rgba(251, 248, 241, 0.94);
+      box-shadow: var(--shadow-soft);
     }
 
     .command-bar {
-      display: grid;
-      grid-template-columns: minmax(280px, 1fr) auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       gap: 16px;
-      align-items: center;
-      padding: 14px 18px;
-      border-bottom: 1px solid var(--line-subtle);
-      background: var(--bg-panel);
+      padding: 18px 20px;
+      border-radius: 18px;
       position: sticky;
-      top: 0;
-      z-index: 3;
+      top: 12px;
+      z-index: 10;
+      backdrop-filter: blur(10px);
     }
 
-    h1 {
+    .command-kicker {
+      color: var(--accent-command);
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1, h2, h3 {
       margin: 0;
       color: var(--ink-strong);
       font-family: var(--font-heading);
-      font-size: 1.5rem;
+    }
+
+    h1 {
+      font-size: clamp(1.55rem, 2vw, 2rem);
       line-height: 1.1;
+      margin-bottom: 6px;
     }
 
     .meta {
-      margin-top: 4px;
-      color: var(--ink-muted);
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
+      color: var(--ink-muted);
       font-size: 0.86rem;
     }
 
-    .actions,
-    .filters {
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line-subtle);
+      background: rgba(229, 223, 208, 0.35);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    button {
+      min-height: 40px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 0 14px;
+      background: var(--bg-panel);
+      color: var(--ink-strong);
+      cursor: pointer;
+      transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button.primary {
+      background: var(--accent-command);
+      border-color: var(--accent-command);
+      color: #fff;
+    }
+
+    button.primary:hover {
+      background: var(--accent-command-strong);
+      border-color: var(--accent-command-strong);
+    }
+
+    button.secondary {
+      border-color: var(--line-subtle);
+      background: rgba(255, 255, 255, 0.75);
+    }
+
+    button.danger {
+      border-color: rgba(143, 45, 35, 0.2);
+      background: rgba(143, 45, 35, 0.08);
+      color: var(--accent-danger);
+    }
+
+    .privacy {
+      padding: 12px 18px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(246, 228, 206, 0.95), rgba(251, 248, 241, 0.94));
+      color: #5a321e;
+    }
+
+    .privacy-copy {
+      margin-top: 6px;
+      font-size: 0.9rem;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(320px, 380px);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .main-panel,
+    .drawer {
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid rgba(199, 192, 177, 0.7);
+      background: linear-gradient(180deg, rgba(229, 223, 208, 0.42), rgba(251, 248, 241, 0));
+    }
+
+    .panel-header p,
+    .drawer-header p,
+    .helper-text,
+    .group-meta,
+    .empty-state {
+      margin: 6px 0 0;
+      color: var(--ink-muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      padding: 18px 20px 16px;
+    }
+
+    .summary-tile {
+      border: 1px solid var(--line-subtle);
+      border-radius: 14px;
+      padding: 14px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(229, 223, 208, 0.28));
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .summary-tile[aria-pressed="true"] {
+      box-shadow: inset 0 0 0 1px currentColor;
+      border-color: currentColor;
+    }
+
+    .summary-kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: inherit;
+    }
+
+    .summary-number {
+      margin-top: 10px;
+      display: block;
+      color: var(--ink-strong);
+      font-family: var(--font-data);
+      font-size: 1.9rem;
+      line-height: 1;
+    }
+
+    .summary-caption {
+      display: block;
+      margin-top: 8px;
+      min-height: 2.5em;
+      color: var(--ink-body);
+      font-size: 0.86rem;
+    }
+
+    .summary-tile.assignee { color: var(--accent-warning); }
+    .summary-tile.location { color: var(--accent-info); }
+    .summary-tile.discrepancy { color: var(--accent-danger); }
+    .summary-tile.new { color: var(--accent-info); }
+    .summary-tile.missing { color: var(--accent-danger); }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.2fr) minmax(200px, 0.8fr) auto;
+      gap: 14px;
+      padding: 0 20px 18px;
+      align-items: end;
+    }
+
+    .field-stack {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field-stack label,
+    .segmented-field legend {
+      font-size: 0.74rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+
+    input[type="search"],
+    input[type="text"],
+    select,
+    textarea {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line-subtle);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink-strong);
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+    }
+
+    .segmented-field {
+      border: 0;
+      padding: 0;
+      margin: 0;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
     }
 
-    .privacy {
-      padding: 10px 18px;
-      border-bottom: 1px solid #d6b28a;
-      background: #f6e4ce;
-      color: #5a321e;
+    .segmented {
+      min-width: 86px;
+      border-color: rgba(143, 134, 111, 0.32);
+      background: rgba(229, 223, 208, 0.38);
     }
 
-    .dashboard {
-      display: grid;
-      grid-template-columns: 240px minmax(0, 1fr);
-      min-height: 0;
+    .segmented[aria-pressed="true"] {
+      background: var(--accent-command);
+      border-color: var(--accent-command);
+      color: #fff;
     }
 
-    aside {
-      border-right: 1px solid var(--line-subtle);
-      background: #ede8dd;
-      padding: 14px;
-      overflow: auto;
-    }
-
-    main {
-      min-width: 0;
-      padding: 14px;
-      overflow: auto;
-    }
-
-    .tile-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .view-tabs,
+    .helper-row {
+      display: flex;
+      flex-wrap: wrap;
       gap: 8px;
+      align-items: center;
+      padding: 0 20px 18px;
     }
 
-    .tile {
-      border: 1px solid var(--line-subtle);
-      border-radius: 6px;
-      background: var(--bg-panel);
-      padding: 10px;
-    }
-
-    .tile strong {
-      display: block;
-      color: var(--ink-strong);
-      font-family: var(--font-data);
-      font-size: 1.45rem;
-      line-height: 1;
-    }
-
-    .tile span {
-      display: block;
-      margin-top: 4px;
+    .helper-row {
+      justify-content: space-between;
       color: var(--ink-muted);
-      font-size: 0.78rem;
+      font-size: 0.84rem;
     }
 
-    .controls {
-      display: grid;
-      gap: 10px;
-      margin: 14px 0;
+    .view-tab[aria-selected="true"] {
+      background: var(--accent-command);
+      border-color: var(--accent-command);
+      color: #fff;
     }
 
-    .controls label {
+    .view-pane[hidden] {
+      display: none;
+    }
+
+    .content-grid {
       display: grid;
-      gap: 5px;
+      grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.9fr);
+      gap: 18px;
+      padding: 0 20px 22px;
+    }
+
+    .table-wrap,
+    .group-card {
+      border: 1px solid rgba(199, 192, 177, 0.82);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 780px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f1ecdf;
+      color: var(--ink-strong);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(199, 192, 177, 0.9);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(199, 192, 177, 0.55);
+      cursor: pointer;
+      transition: background 140ms ease;
+    }
+
+    tbody tr:hover,
+    tbody tr.is-active {
+      background: rgba(229, 223, 208, 0.42);
+    }
+
+    td {
+      padding: 12px 14px;
+      vertical-align: top;
+      font-size: 0.89rem;
+    }
+
+    .mono {
+      font-family: var(--font-data);
       color: var(--ink-strong);
       font-size: 0.84rem;
+    }
+
+    .row-title {
+      font-weight: 700;
+      color: var(--ink-strong);
+      margin-bottom: 4px;
+    }
+
+    .row-subtitle {
+      color: var(--ink-muted);
+      font-size: 0.82rem;
+    }
+
+    .badge-row,
+    .group-list,
+    .drawer-status {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge.warning {
+      color: var(--accent-warning);
+      border-color: rgba(196, 138, 24, 0.26);
+      background: rgba(196, 138, 24, 0.11);
+    }
+
+    .badge.info {
+      color: var(--accent-info);
+      border-color: rgba(49, 95, 125, 0.26);
+      background: rgba(49, 95, 125, 0.11);
+    }
+
+    .badge.danger,
+    .badge.missing {
+      color: var(--accent-danger);
+      border-color: rgba(143, 45, 35, 0.24);
+      background: rgba(143, 45, 35, 0.10);
+    }
+
+    .badge.ok {
+      color: var(--status-ok);
+      border-color: rgba(86, 122, 53, 0.22);
+      background: rgba(86, 122, 53, 0.11);
+    }
+
+    .badge.neutral {
+      color: var(--ink-body);
+      border-color: rgba(143, 134, 111, 0.28);
+      background: rgba(229, 223, 208, 0.24);
+    }
+
+    .group-grid {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .group-card {
+      padding: 14px;
+    }
+
+    .group-card-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .group-card h3 {
+      font-size: 1rem;
+      margin-bottom: 3px;
+    }
+
+    .group-count {
+      font-family: var(--font-data);
+      color: var(--accent-command);
+      font-size: 1rem;
       font-weight: 700;
     }
 
-    input[type="search"],
-    select {
-      width: 100%;
-      border: 1px solid var(--line-strong);
-      border-radius: 6px;
-      background: #fffdf8;
-      color: var(--ink-strong);
-      min-height: 36px;
-      padding: 7px 9px;
+    .drawer {
+      position: sticky;
+      top: 18px;
+      min-height: calc(100vh - 36px);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    .drawer-header {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(199, 192, 177, 0.7);
+      background: linear-gradient(180deg, rgba(47, 93, 80, 0.09), transparent);
+    }
+
+    .drawer-body {
+      padding: 16px 18px 18px;
+      overflow: auto;
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .drawer-section {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(199, 192, 177, 0.75);
+      background: rgba(255, 255, 255, 0.66);
+    }
+
+    .drawer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .drawer-footer {
+      padding: 16px 18px 18px;
+      border-top: 1px solid rgba(199, 192, 177, 0.7);
+      background: rgba(229, 223, 208, 0.3);
+      display: grid;
+      gap: 12px;
     }
 
     .status-line {
       min-height: 22px;
       color: var(--accent-command-strong);
       font-size: 0.86rem;
-    }
-
-    .table-wrap {
-      border: 1px solid var(--line-subtle);
-      border-radius: 8px;
-      background: var(--bg-panel);
-      overflow: auto;
-      max-height: calc(100vh - 200px);
-    }
-
-    table {
-      width: 100%;
-      min-width: 1180px;
-      border-collapse: collapse;
-    }
-
-    th,
-    td {
-      border-bottom: 1px solid var(--line-subtle);
-      padding: 8px;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    th {
-      background: var(--bg-panel-strong);
-      color: var(--ink-strong);
-      font-size: 0.78rem;
-      position: sticky;
-      top: 0;
-      z-index: 1;
-    }
-
-    tbody tr:focus-within,
-    tbody tr:hover {
-      background: #fff8ea;
-    }
-
-    .key {
-      color: var(--ink-strong);
-      font-family: var(--font-data);
-      font-size: 0.82rem;
-      white-space: nowrap;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      border: 1px solid var(--line-subtle);
-      border-radius: 999px;
-      padding: 2px 7px;
-      background: #fffdf8;
-      color: var(--ink-strong);
-      font-size: 0.76rem;
-      white-space: nowrap;
-    }
-
-    .badge.missing { border-color: var(--accent-danger); color: var(--accent-danger); }
-    .badge.new { border-color: var(--accent-info); color: var(--accent-info); }
-    .badge.ok { border-color: var(--status-ok); color: var(--status-ok); }
-
-    .editable {
-      width: 100%;
-      min-width: 130px;
-      border: 1px solid transparent;
-      border-radius: 5px;
-      background: transparent;
-      color: var(--ink-strong);
-      padding: 6px;
-    }
-
-    .editable:hover,
-    .editable:focus {
-      border-color: var(--line-strong);
-      background: #fffdf8;
-    }
-
-    textarea.editable {
-      min-height: 58px;
-      resize: vertical;
     }
 
     .sr-only {
@@ -295,135 +588,302 @@
       border: 0;
     }
 
-    .skip-link {
-      position: absolute;
-      left: 12px;
-      top: -48px;
-      z-index: 4;
-      border-radius: 6px;
-      padding: 9px 12px;
-      background: var(--accent-command-strong);
-      color: #fff;
-    }
-
-    .skip-link:focus {
-      top: 12px;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        transition-duration: 0.01ms !important;
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        scroll-behavior: auto !important;
-      }
-    }
-
-    @media (max-width: 920px) {
-      .command-bar,
-      .dashboard {
+    @media (max-width: 1180px) {
+      .workspace {
         grid-template-columns: 1fr;
       }
 
-      .command-bar { position: static; }
-      aside { border-right: 0; border-bottom: 1px solid var(--line-subtle); }
-      .table-wrap { max-height: none; }
+      .drawer {
+        position: relative;
+        top: 0;
+        min-height: 0;
+      }
+    }
+
+    @media (max-width: 960px) {
+      .summary-grid,
+      .toolbar,
+      .content-grid,
+      .drawer-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        padding: 12px;
+      }
+
+      .command-bar,
+      .panel-header,
+      .summary-grid,
+      .toolbar,
+      .view-tabs,
+      .helper-row,
+      .content-grid,
+      .drawer-header,
+      .drawer-body,
+      .drawer-footer {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        transition: none !important;
+        animation: none !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
 </head>
 <body>
-  <a class="skip-link" href="#main-dashboard-content">Skip to main dashboard content</a>
+  <a href="#main-dashboard-content" class="skip-link">Skip to main dashboard content</a>
+
   <div class="shell">
     <header class="command-bar">
       <div>
-        <h1>SHR Command Dashboard</h1>
+        <div class="command-kicker">Command Accountability Surface</div>
+        <h1>{{ title or "SHR Command Dashboard" }}</h1>
         <div class="meta" aria-label="Export metadata">
-          <span>Generated: <span id="generated-at">{{ generated_at }}</span></span>
-          <span>Records: <span id="record-count">{{ record_count }}</span></span>
-          <span>Offline local HTML</span>
+          <span class="meta-chip">Generated: <span id="generated-at">{{ generated_at or (dashboard_payload.meta.generated_at if dashboard_payload and dashboard_payload.meta else "") }}</span></span>
+          <span class="meta-chip">Records: <span id="record-count">{{ record_count or (dashboard_payload.meta.dashboard_record_count if dashboard_payload and dashboard_payload.meta else 0) }}</span></span>
+          <span class="meta-chip">Offline-safe</span>
+          <span class="meta-chip">No network dependencies</span>
+          <span class="meta-chip">Status is labeled in text, not just color</span>
         </div>
       </div>
       <div class="actions" aria-label="Dashboard actions">
         <button class="primary" type="button" onclick="saveDashboardHtml()">Save Dashboard HTML</button>
-        <button type="button" onclick="exportJsonBackup()">Export JSON Backup</button>
+        <button class="secondary" type="button" onclick="exportJsonBackup()">Export JSON Backup</button>
         <label>
           <span class="sr-only">Import JSON Backup</span>
           <input class="sr-only" id="backup-import" type="file" accept="application/json,.json" onchange="importJsonBackup(event)">
-          <button type="button" onclick="document.getElementById('backup-import').click()">Import JSON Backup</button>
+          <button class="secondary" type="button" onclick="document.getElementById('backup-import').click()">Import JSON Backup</button>
         </label>
-        <button type="button" onclick="exportInventoryCsv()">Export Inventory CSV</button>
-        <button type="button" title="Export Discrepancy CSV" onclick="exportDiscrepancyCsv()">Export Discrepancies CSV</button>
+        <button class="secondary" type="button" onclick="exportInventoryCsv()">Export Inventory CSV</button>
+        <button class="secondary" type="button" title="Export Discrepancy CSV" onclick="exportDiscrepancyCsv()">Export Discrepancies CSV</button>
         <button class="danger" type="button" onclick="clearLocalChanges()">Clear Local Changes</button>
       </div>
     </header>
 
     <section class="privacy" aria-label="Privacy warning">
       <strong>Privacy warning:</strong>
-      This saved HTML file contains embedded property book data and commander-entered notes. Store it only on approved local systems.
+      <div class="privacy-copy">This saved HTML file contains embedded property book data and commander-entered notes. Store it only on approved local systems.</div>
     </section>
 
-    <div class="dashboard">
-      <aside aria-label="Exception summary">
-        <div class="tile-grid">
-          <div class="tile"><strong id="needs-assignee">0</strong><span>Needs Assignee</span></div>
-          <div class="tile"><strong id="needs-location">0</strong><span>Needs Location</span></div>
-          <div class="tile"><strong id="open-discrepancy">0</strong><span>Open Discrepancy</span></div>
-          <div class="tile"><strong id="new-items">0</strong><span>New Items</span></div>
-          <div class="tile"><strong id="missing-items">0</strong><span>Missing From Latest SHR</span></div>
-          <div class="tile"><strong id="visible-count">0</strong><span>Visible Items</span></div>
+    <div class="workspace">
+      <section class="main-panel" id="main-dashboard-content">
+        <div class="panel-header">
+          <div>
+            <h2>Exception-first dashboard</h2>
+            <p>Start with accountability gaps, then move into inventory, grouped views, and item-level review. The detail drawer is the single review surface for serial-level follow-up.</p>
+          </div>
         </div>
 
-        <div class="controls" aria-label="Inventory filters">
-          <label>
-            Search
-            <input id="search" type="search" placeholder="LIN, NSN, serial, assignee..." oninput="renderDashboard()">
-          </label>
-          <label>
-            Exception Filter
-            <select id="exception-filter" onchange="renderDashboard()">
-              <option value="all">All Items</option>
-              <option value="needs_assignee">Needs Assignee</option>
-              <option value="needs_location">Needs Location</option>
-              <option value="open_discrepancy">Open Discrepancy</option>
-              <option value="new">New Items</option>
-              <option value="missing">Missing From Latest SHR</option>
+        <div class="summary-grid" id="summary-grid"></div>
+
+        <div class="toolbar">
+          <div class="field-stack">
+            <label for="search">Search inventory</label>
+            <input id="search" type="search" placeholder="LIN, NSN, serial, assignee, location, notes..." oninput="renderDashboard()">
+          </div>
+          <div class="field-stack">
+            <label for="sort-order">Sort rows</label>
+            <select id="sort-order" onchange="renderDashboard()">
+              <option value="risk">Highest risk first</option>
+              <option value="serial">Serial number</option>
+              <option value="lin">LIN</option>
+              <option value="assignee">Signed Down To</option>
+              <option value="location">Current Location</option>
             </select>
-          </label>
-          <div id="save-status" class="status-line" role="status" aria-live="polite"></div>
-          <div class="status-line">Offline-safe. No network dependencies. Status is labeled in text, not just color.</div>
+          </div>
+          <fieldset class="segmented-field" aria-label="Quick filters">
+            <legend>Quick filters</legend>
+            <button class="segmented" type="button" data-filter="all" aria-pressed="true">All</button>
+            <button class="segmented" type="button" data-filter="exceptions" aria-pressed="false">Exceptions</button>
+            <button class="segmented" type="button" data-filter="assigned" aria-pressed="false">Assigned</button>
+            <button class="segmented" type="button" data-filter="unassigned" aria-pressed="false">Unassigned</button>
+          </fieldset>
+        </div>
+
+        <div class="view-tabs" role="tablist" aria-label="Dashboard views">
+          <button class="view-tab" type="button" role="tab" data-view="inventory" aria-selected="true">Inventory</button>
+          <button class="view-tab" type="button" role="tab" data-view="assignee" aria-selected="false">By Assignee</button>
+          <button class="view-tab" type="button" role="tab" data-view="location" aria-selected="false">By Location</button>
+          <button class="view-tab" type="button" role="tab" data-view="status" aria-selected="false">Labels &amp; Status</button>
+        </div>
+
+        <div class="helper-row">
+          <div id="filter-summary">Showing all accountable items.</div>
+          <div id="selection-summary">Select a row to review item detail.</div>
+        </div>
+
+        <div class="view-pane" id="view-inventory">
+          <div class="content-grid">
+            <div class="table-wrap">
+              <table aria-describedby="filter-summary">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Item</th>
+                    <th>Signed Down To</th>
+                    <th>Current Location</th>
+                  </tr>
+                </thead>
+                <tbody id="inventory-body"></tbody>
+              </table>
+            </div>
+            <div class="group-grid" id="inventory-rail"></div>
+          </div>
+        </div>
+
+        <div class="view-pane" id="view-assignee" hidden>
+          <div class="content-grid">
+            <div class="group-grid" id="assignee-groups"></div>
+            <div class="group-grid" id="assignee-rail"></div>
+          </div>
+        </div>
+
+        <div class="view-pane" id="view-location" hidden>
+          <div class="content-grid">
+            <div class="group-grid" id="location-groups"></div>
+            <div class="group-grid" id="location-rail"></div>
+          </div>
+        </div>
+
+        <div class="view-pane" id="view-status" hidden>
+          <div class="content-grid">
+            <div class="group-grid" id="status-groups"></div>
+            <div class="group-grid" id="status-rail"></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="drawer" aria-labelledby="detail-heading">
+        <div class="drawer-header">
+          <div class="command-kicker">Serial-Level Review</div>
+          <h2 id="detail-heading">Item Detail</h2>
+          <p id="detail-subtitle">Select an item from the inventory views to review accountability, discrepancy, and location context.</p>
+          <div class="drawer-status" id="detail-status"></div>
+        </div>
+
+        <div class="drawer-body">
+          <section class="drawer-section">
+            <h3>Source Snapshot</h3>
+            <div class="drawer-grid">
+              <div class="field-stack">
+                <label for="detail-serial">Serial Number</label>
+                <input id="detail-serial" type="text" readonly>
+              </div>
+              <div class="field-stack">
+                <label for="detail-lin">LIN</label>
+                <input id="detail-lin" type="text" readonly>
+              </div>
+              <div class="field-stack">
+                <label for="detail-nsn">NSN</label>
+                <input id="detail-nsn" type="text" readonly>
+              </div>
+              <div class="field-stack">
+                <label for="detail-qty">On Hand Qty</label>
+                <input id="detail-qty" type="text" readonly>
+              </div>
+            </div>
+            <div class="field-stack">
+              <label for="detail-description">Description</label>
+              <textarea id="detail-description" readonly></textarea>
+            </div>
+          </section>
+
+          <section class="drawer-section">
+            <h3>Accountability</h3>
+            <div class="drawer-grid">
+              <div class="field-stack">
+                <label for="detail-assignee">Signed Down To</label>
+                <input id="detail-assignee" type="text" data-field="assignee" oninput="updateSelectedRecordField(event)">
+              </div>
+              <div class="field-stack">
+                <label for="detail-sub-holder">Sub-holder</label>
+                <input id="detail-sub-holder" type="text" data-field="sub_holder" oninput="updateSelectedRecordField(event)">
+              </div>
+            </div>
+            <div class="drawer-grid">
+              <div class="field-stack">
+                <label for="detail-discrepancy">Discrepancy</label>
+                <input id="detail-discrepancy" type="text" data-field="discrepancy_status" oninput="updateSelectedRecordField(event)">
+              </div>
+              <div class="field-stack">
+                <label for="detail-labels">Labels</label>
+                <input id="detail-labels" type="text" data-field="labels" oninput="updateSelectedRecordField(event)">
+              </div>
+            </div>
+          </section>
+
+          <section class="drawer-section">
+            <h3>Current Location</h3>
+            <div class="drawer-grid">
+              <div class="field-stack">
+                <label for="detail-location-area">Area</label>
+                <input id="detail-location-area" type="text" data-field="location_area" oninput="updateSelectedRecordField(event)">
+              </div>
+              <div class="field-stack">
+                <label for="detail-location-building">Building</label>
+                <input id="detail-location-building" type="text" data-field="location_building" oninput="updateSelectedRecordField(event)">
+              </div>
+              <div class="field-stack">
+                <label for="detail-location-room">Room</label>
+                <input id="detail-location-room" type="text" data-field="location_room" oninput="updateSelectedRecordField(event)">
+              </div>
+              <div class="field-stack">
+                <label for="detail-location-container">Vehicle / Container</label>
+                <input id="detail-location-container" type="text" data-field="location_container" oninput="updateSelectedRecordField(event)">
+              </div>
+            </div>
+            <div class="field-stack">
+              <label for="detail-location-notes">Location Notes</label>
+              <textarea id="detail-location-notes" data-field="location_notes" oninput="updateSelectedRecordField(event)"></textarea>
+            </div>
+          </section>
+
+          <section class="drawer-section">
+            <h3>Review Notes</h3>
+            <div class="drawer-grid">
+              <div class="field-stack">
+                <label for="detail-last-reviewed">Last Reviewed</label>
+                <input id="detail-last-reviewed" type="text" data-field="last_reviewed_at" oninput="updateSelectedRecordField(event)">
+              </div>
+              <div class="field-stack">
+                <label for="detail-updated">Updated</label>
+                <input id="detail-updated" type="text" readonly>
+              </div>
+            </div>
+            <div class="field-stack">
+              <label for="detail-notes">Commander Notes</label>
+              <textarea id="detail-notes" data-field="notes" oninput="updateSelectedRecordField(event)"></textarea>
+            </div>
+          </section>
+        </div>
+
+        <div class="drawer-footer">
+          <div class="helper-text">The detail drawer is the editing surface for follow-on workers. Save and export behavior stays wired to the existing offline hooks.</div>
+          <div class="status-line" id="save-status" role="status" aria-live="polite"></div>
         </div>
       </aside>
-
-      <main id="main-dashboard-content" aria-label="Inventory workspace" tabindex="-1">
-        <div class="sr-only" aria-hidden="true">
-          <span data-field="assignee"></span>
-          <span data-field="notes"></span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>LIN / NSN</th>
-                <th>Description</th>
-                <th>Serial</th>
-                <th>Signed Down To</th>
-                <th>Sub-holder</th>
-                <th>Current Location</th>
-                <th>Discrepancy</th>
-                <th>Labels</th>
-                <th>Notes</th>
-                <th>Last Reviewed</th>
-              </tr>
-            </thead>
-            <tbody id="inventory-body"></tbody>
-          </table>
-        </div>
-      </main>
     </div>
   </div>
 
-  <script id="shr-dashboard-bootstrap" type="application/json">{{ bootstrap_json }}</script>
+  <script id="shr-dashboard-bootstrap" type="application/json">{% if bootstrap_json is defined and bootstrap_json %}{{ bootstrap_json }}{% elif dashboard_payload_json is defined and dashboard_payload_json %}{{ dashboard_payload_json }}{% elif dashboard_payload is defined and dashboard_payload %}{{ dashboard_payload | tojson(indent=2) }}{% else %}{"records": [], "metadata": {}}{% endif %}</script>
   <script>
     (function () {
       const bootstrapElement = document.getElementById('shr-dashboard-bootstrap');
@@ -436,12 +896,61 @@
         return;
       }
 
-      const storageKey = 'shr-command-dashboard:' + ((payload.metadata && payload.metadata.generated_at) || 'local');
-      window.__SHR_DASHBOARD_BOOTSTRAP__ = payload;
-      window.__DASHBOARD_DATA__ = payload.records || [];
+      const rootPayload = normalizeRootPayload(payload);
+      const storageKey = 'shr-command-dashboard:' + ((rootPayload.metadata && rootPayload.metadata.generated_at) || rootPayload.meta && rootPayload.meta.generated_at || 'local');
+      const state = {
+        activeView: 'inventory',
+        activeFilter: 'all',
+        selectedRecordKey: '',
+        records: loadRecords(rootPayload.records || [])
+      };
 
-      let records = loadRecords(payload.records || []);
-      renderDashboard();
+      window.__SHR_DASHBOARD_BOOTSTRAP__ = rootPayload;
+      window.__DASHBOARD_DATA__ = state.records;
+
+      const summaryConfig = [
+        { key: 'missingAssignee', label: 'Needs Assignee', filter: 'missing-assignee', className: 'assignee', description: 'Items missing signed-down-to ownership.' },
+        { key: 'missingLocation', label: 'Needs Location', filter: 'missing-location', className: 'location', description: 'Items without a usable current location.' },
+        { key: 'discrepancies', label: 'Open Discrepancy', filter: 'discrepancy', className: 'discrepancy', description: 'Discrepancies requiring follow-up.' },
+        { key: 'newItems', label: 'New Items', filter: 'new', className: 'new', description: 'Items introduced by the latest import.' },
+        { key: 'missingLatest', label: 'Missing From Latest SHR', filter: 'missing-latest', className: 'missing', description: 'Previously known items not found in the latest SHR.' }
+      ];
+
+      const detailFields = {
+        serial_number: document.getElementById('detail-serial'),
+        lin: document.getElementById('detail-lin'),
+        nsn: document.getElementById('detail-nsn'),
+        oh_qty: document.getElementById('detail-qty'),
+        mpo_description: document.getElementById('detail-description'),
+        assignee: document.getElementById('detail-assignee'),
+        sub_holder: document.getElementById('detail-sub-holder'),
+        discrepancy_status: document.getElementById('detail-discrepancy'),
+        labels: document.getElementById('detail-labels'),
+        location_area: document.getElementById('detail-location-area'),
+        location_building: document.getElementById('detail-location-building'),
+        location_room: document.getElementById('detail-location-room'),
+        location_container: document.getElementById('detail-location-container'),
+        location_notes: document.getElementById('detail-location-notes'),
+        last_reviewed_at: document.getElementById('detail-last-reviewed'),
+        updated_at: document.getElementById('detail-updated'),
+        notes: document.getElementById('detail-notes')
+      };
+
+      document.querySelectorAll('[data-filter]').forEach((button) => {
+        button.addEventListener('click', function () {
+          state.activeFilter = button.getAttribute('data-filter');
+          syncFilterButtons();
+          renderDashboard();
+        });
+      });
+
+      document.querySelectorAll('[data-view]').forEach((button) => {
+        button.addEventListener('click', function () {
+          state.activeView = button.getAttribute('data-view');
+          syncTabs();
+          renderDashboard();
+        });
+      });
 
       window.saveDashboardHtml = saveDashboardHtml;
       window.exportJsonBackup = exportJsonBackup;
@@ -450,6 +959,19 @@
       window.exportDiscrepancyCsv = exportDiscrepancyCsv;
       window.clearLocalChanges = clearLocalChanges;
       window.renderDashboard = renderDashboard;
+      window.updateSelectedRecordField = updateSelectedRecordField;
+
+      if (state.records[0]) {
+        state.selectedRecordKey = state.records[0].record_key;
+      }
+
+      renderDashboard();
+
+      function normalizeRootPayload(source) {
+        const metadata = source.metadata || source.meta || {};
+        const records = Array.isArray(source.records) ? source.records : [];
+        return { metadata: metadata, records: records };
+      }
 
       function loadRecords(defaultRecords) {
         try {
@@ -458,16 +980,16 @@
             const parsed = JSON.parse(saved);
             if (Array.isArray(parsed.records)) {
               setStatus('Loaded local changes.');
-              return parsed.records;
+              return parsed.records.map(normalizeRecord);
             }
           }
         } catch (error) {
           setStatus('Local changes could not be loaded.');
         }
-        return defaultRecords.map((record) => normalizeRecord(record));
+        return defaultRecords.map(normalizeRecord);
       }
 
-      function normalizeRecord(record) {
+      function normalizeRecord(record, index) {
         const normalized = Object.assign({
           record_key: '',
           record_id: '',
@@ -494,9 +1016,10 @@
           is_new: false,
           is_missing_from_latest: false,
           merge_confidence: ''
-        }, record);
+        }, record || {});
+
         if (!normalized.record_key) {
-          normalized.record_key = normalized.record_id || normalized.serial_number || Math.random().toString(36).slice(2);
+          normalized.record_key = normalized.record_id || normalized.serial_number || ('record-' + String(index || 0));
         }
         if (!Array.isArray(normalized.labels)) {
           normalized.labels = String(normalized.labels || '').split(',').map((label) => label.trim()).filter(Boolean);
@@ -505,17 +1028,23 @@
       }
 
       function renderDashboard() {
-        records = records.map((record) => normalizeRecord(record));
-        const filtered = filterRecords(records);
-        renderSummary(records, filtered.length);
-        renderRows(filtered);
-        window.__DASHBOARD_DATA__ = records;
+        const filtered = filterRecords(state.records);
+        renderSummary(state.records);
+        renderInventory(filtered);
+        renderInventoryRail(filtered);
+        renderAssigneeGroups(filtered);
+        renderLocationGroups(filtered);
+        renderStatusGroups(filtered);
+        renderSelection(filtered);
+        renderViewState();
+        syncTabs();
+        window.__DASHBOARD_DATA__ = state.records;
       }
 
-      function filterRecords(source) {
+      function filterRecords(records) {
         const query = document.getElementById('search').value.trim().toLowerCase();
-        const exceptionFilter = document.getElementById('exception-filter').value;
-        return source.filter((record) => {
+        const sortOrder = document.getElementById('sort-order').value;
+        const filtered = records.filter((record) => {
           const haystack = [
             record.lin,
             record.nsn,
@@ -525,114 +1054,385 @@
             record.assignee,
             record.sub_holder,
             record.location_area,
+            record.location_building,
             record.location_room,
+            record.location_container,
+            record.location_notes,
+            Array.isArray(record.labels) ? record.labels.join(' ') : '',
             record.notes
           ].join(' ').toLowerCase();
+
           if (query && !haystack.includes(query)) return false;
-          if (exceptionFilter === 'needs_assignee') return !record.assignee;
-          if (exceptionFilter === 'needs_location') return !hasLocation(record);
-          if (exceptionFilter === 'open_discrepancy') return Boolean(record.discrepancy_status);
-          if (exceptionFilter === 'new') return record.is_new === true;
-          if (exceptionFilter === 'missing') return record.is_missing_from_latest === true;
+          if (!matchesFilter(record, state.activeFilter)) return false;
           return true;
+        });
+
+        filtered.sort(function (left, right) {
+          if (sortOrder === 'serial') return safeText(left.serial_number).localeCompare(safeText(right.serial_number));
+          if (sortOrder === 'lin') return safeText(left.lin).localeCompare(safeText(right.lin));
+          if (sortOrder === 'assignee') return safeText(left.assignee).localeCompare(safeText(right.assignee));
+          if (sortOrder === 'location') return locationSummary(left).localeCompare(locationSummary(right));
+          return riskScore(right) - riskScore(left) || safeText(left.serial_number).localeCompare(safeText(right.serial_number));
+        });
+
+        return filtered;
+      }
+
+      function matchesFilter(record, filterName) {
+        if (filterName === 'all') return true;
+        if (filterName === 'exceptions') return isMissingAssignee(record) || isMissingLocation(record) || hasDiscrepancy(record) || record.is_new || record.is_missing_from_latest;
+        if (filterName === 'assigned') return !isMissingAssignee(record);
+        if (filterName === 'unassigned') return isMissingAssignee(record);
+        if (filterName === 'missing-assignee') return isMissingAssignee(record);
+        if (filterName === 'missing-location') return isMissingLocation(record);
+        if (filterName === 'discrepancy') return hasDiscrepancy(record);
+        if (filterName === 'new') return record.is_new === true;
+        if (filterName === 'missing-latest') return record.is_missing_from_latest === true;
+        return true;
+      }
+
+      function renderSummary(records) {
+        const counts = {
+          missingAssignee: records.filter(isMissingAssignee).length,
+          missingLocation: records.filter(isMissingLocation).length,
+          discrepancies: records.filter(hasDiscrepancy).length,
+          newItems: records.filter(function (record) { return record.is_new === true; }).length,
+          missingLatest: records.filter(function (record) { return record.is_missing_from_latest === true; }).length
+        };
+
+        const container = document.getElementById('summary-grid');
+        container.innerHTML = '';
+        summaryConfig.forEach(function (item) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'summary-tile ' + item.className;
+          button.setAttribute('aria-pressed', String(state.activeFilter === item.filter));
+          button.innerHTML = [
+            '<span class="summary-kicker"><span>' + escapeHtml(item.label) + '</span><span>' + escapeHtml(countLabel(item.filter)) + '</span></span>',
+            '<span class="summary-number">' + counts[item.key] + '</span>',
+            '<span class="summary-caption">' + escapeHtml(item.description) + '</span>'
+          ].join('');
+          button.addEventListener('click', function () {
+            state.activeFilter = state.activeFilter === item.filter ? 'all' : item.filter;
+            syncFilterButtons();
+            renderDashboard();
+          });
+          container.appendChild(button);
         });
       }
 
-      function renderSummary(source, visibleCount) {
-        setText('needs-assignee', source.filter((record) => !record.assignee).length);
-        setText('needs-location', source.filter((record) => !hasLocation(record)).length);
-        setText('open-discrepancy', source.filter((record) => Boolean(record.discrepancy_status)).length);
-        setText('new-items', source.filter((record) => record.is_new === true).length);
-        setText('missing-items', source.filter((record) => record.is_missing_from_latest === true).length);
-        setText('visible-count', visibleCount);
-        setText('record-count', source.length);
+      function countLabel(filterName) {
+        if (filterName === 'missing-assignee') return 'Owner gap';
+        if (filterName === 'missing-location') return 'Location gap';
+        if (filterName === 'discrepancy') return 'Follow-up';
+        if (filterName === 'new') return 'Latest import';
+        if (filterName === 'missing-latest') return 'Investigate';
+        return 'Review';
       }
 
-      function renderRows(source) {
+      function renderInventory(records) {
         const tbody = document.getElementById('inventory-body');
         tbody.innerHTML = '';
-        if (!source.length) {
+        if (!records.length) {
           const row = document.createElement('tr');
-          row.innerHTML = '<td colspan="11">No inventory items match the current filter.</td>';
+          row.innerHTML = '<td colspan="4"><div class="empty-state">No inventory items match the current view.</div></td>';
           tbody.appendChild(row);
           return;
         }
 
-        source.forEach((record) => {
+        records.forEach(function (record) {
           const row = document.createElement('tr');
+          row.tabIndex = 0;
           row.dataset.recordKey = record.record_key;
+          row.className = record.record_key === state.selectedRecordKey ? 'is-active' : '';
           row.innerHTML = [
-            '<td>' + statusBadges(record) + '</td>',
-            '<td><div class="key">' + escapeHtml(record.lin) + '</div><div>' + escapeHtml(record.nsn) + '</div><div class="key">Qty ' + escapeHtml(record.oh_qty) + '</div></td>',
-            '<td>' + escapeHtml(record.nsn_description || record.mpo_description) + '</td>',
-            '<td class="key">' + escapeHtml(record.serial_number || 'No serial') + '</td>',
-            editableCell(record, 'assignee', 'input'),
-            editableCell(record, 'sub_holder', 'input'),
-            locationCell(record),
-            editableCell(record, 'discrepancy_status', 'input'),
-            editableCell(Object.assign({}, record, { labels: record.labels.join(', ') }), 'labels', 'input'),
-            editableCell(record, 'notes', 'textarea'),
-            editableCell(record, 'last_reviewed_at', 'input')
+            '<td><div class="badge-row">' + buildStatusBadges(record).join('') + '</div></td>',
+            '<td><div class="row-title">' + escapeHtml(safeText(record.nsn_description) || safeText(record.mpo_description) || 'Unnamed item') + '</div><div class="row-subtitle mono">' + escapeHtml(safeText(record.serial_number) || 'No serial') + '</div><div class="row-subtitle">' + escapeHtml([safeText(record.lin), safeText(record.nsn)].filter(Boolean).join(' | ')) + '</div></td>',
+            '<td><div class="row-title">' + escapeHtml(safeText(record.assignee) || 'Assignee pending') + '</div><div class="row-subtitle">' + escapeHtml(safeText(record.sub_holder) || 'No sub-holder') + '</div></td>',
+            '<td><div class="row-title">' + escapeHtml(locationSummary(record) || 'Location pending') + '</div><div class="row-subtitle">' + escapeHtml(safeText(record.location_notes) || 'No location notes') + '</div></td>'
           ].join('');
+          row.addEventListener('click', function () {
+            state.selectedRecordKey = record.record_key;
+            renderDashboard();
+          });
+          row.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              state.selectedRecordKey = record.record_key;
+              renderDashboard();
+            }
+          });
           tbody.appendChild(row);
         });
       }
 
-      function editableCell(record, field, type) {
-        const value = Array.isArray(record[field]) ? record[field].join(', ') : (record[field] || '');
-        const shared = 'class="editable" data-record-key="' + escapeAttribute(record.record_key) + '" data-field="' + field + '" aria-label="' + field.replaceAll('_', ' ') + '" oninput="updateRecordField(event)"';
-        if (type === 'textarea') {
-          return '<td><textarea ' + shared + '>' + escapeHtml(value) + '</textarea></td>';
+      function renderInventoryRail(records) {
+        const lowConfidence = records.filter(function (record) {
+          return safeText(record.merge_confidence) && safeText(record.merge_confidence) !== 'serial_number' && safeText(record.merge_confidence) !== 'high';
+        }).length;
+        const reviewGaps = records.filter(function (record) { return !safeText(record.last_reviewed_at); }).length;
+        document.getElementById('inventory-rail').innerHTML = [
+          buildInfoCard('Review Watch', String(reviewGaps) + ' items are missing a review date.', [
+            badgeMarkup('warning', 'Review date missing'),
+            badgeMarkup('info', 'Use drawer to stage updates')
+          ]),
+          buildInfoCard('Merge Confidence', String(lowConfidence) + ' items are using a fallback match key.', [
+            badgeMarkup('danger', 'Needs manual validation')
+          ])
+        ].join('');
+      }
+
+      function renderAssigneeGroups(records) {
+        const groups = groupRecords(records, function (record) {
+          return safeText(record.assignee) || 'Unassigned';
+        });
+        renderGroupedCards('assignee-groups', groups, 'No assignee groups match the current filters.');
+        document.getElementById('assignee-rail').innerHTML = buildInfoCard('Assignee Review', 'See concentration of equipment and unresolved issues by holder.', [
+          badgeMarkup('warning', 'Unassigned stays visible'),
+          badgeMarkup('info', 'Grouped by Signed Down To')
+        ]);
+      }
+
+      function renderLocationGroups(records) {
+        const groups = groupRecords(records, function (record) {
+          return locationSummary(record) || 'Location pending';
+        });
+        renderGroupedCards('location-groups', groups, 'No location groups match the current filters.');
+        document.getElementById('location-rail').innerHTML = buildInfoCard('Location Review', 'Spot rooms, bays, or containers that need cleanup before inventory events.', [
+          badgeMarkup('warning', 'Unknown locations grouped together'),
+          badgeMarkup('danger', 'Missing latest items stay visible')
+        ]);
+      }
+
+      function renderStatusGroups(records) {
+        const groups = [
+          ['Open Discrepancy', records.filter(hasDiscrepancy)],
+          ['Needs Assignee', records.filter(isMissingAssignee)],
+          ['Needs Location', records.filter(isMissingLocation)],
+          ['New Items', records.filter(function (record) { return record.is_new === true; })],
+          ['Missing From Latest SHR', records.filter(function (record) { return record.is_missing_from_latest === true; })],
+          ['Labeled Items', records.filter(function (record) { return Array.isArray(record.labels) && record.labels.length; })]
+        ].filter(function (entry) { return entry[1].length; });
+        renderGroupedCards('status-groups', groups, 'No status groups match the current filters.');
+        document.getElementById('status-rail').innerHTML = buildInfoCard('Status Review', 'Labels and status help the dashboard stay exception-driven instead of volume-driven.', [
+          badgeMarkup('danger', 'Discrepancies stay elevated'),
+          badgeMarkup('neutral', 'Labels layer on top of status')
+        ]);
+      }
+
+      function renderGroupedCards(targetId, groups, emptyMessage) {
+        const container = document.getElementById(targetId);
+        container.innerHTML = '';
+        if (!groups.length) {
+          container.innerHTML = '<div class="group-card"><div class="empty-state">' + escapeHtml(emptyMessage) + '</div></div>';
+          return;
         }
-        return '<td><input ' + shared + ' value="' + escapeAttribute(value) + '"></td>';
+
+        groups.forEach(function (entry) {
+          const groupName = entry[0];
+          const groupRecordsList = entry[1];
+          const issueCount = groupRecordsList.filter(function (record) {
+            return isMissingAssignee(record) || isMissingLocation(record) || hasDiscrepancy(record) || record.is_missing_from_latest;
+          }).length;
+          const card = document.createElement('article');
+          card.className = 'group-card';
+          card.innerHTML = [
+            '<div class="group-card-header">',
+            '<div><h3>' + escapeHtml(groupName) + '</h3><div class="group-meta">' + escapeHtml(groupRecordsList.length + ' items | ' + issueCount + ' open issues') + '</div></div>',
+            '<div class="group-count">' + groupRecordsList.length + '</div>',
+            '</div>',
+            '<div class="group-list">' + summarizeGroupBadges(groupRecordsList).join('') + '</div>',
+            '<div class="group-list">' + groupRecordsList.slice(0, 6).map(function (record) {
+              return badgeMarkup('neutral', safeText(record.serial_number) || safeText(record.lin) || 'No serial');
+            }).join('') + '</div>'
+          ].join('');
+          container.appendChild(card);
+        });
       }
 
-      function locationCell(record) {
-        return '<td>' +
-          locationInput(record, 'location_area', 'Area') +
-          locationInput(record, 'location_building', 'Building') +
-          locationInput(record, 'location_room', 'Room') +
-          locationInput(record, 'location_container', 'Container') +
-          locationInput(record, 'location_notes', 'Location notes') +
-          '</td>';
-      }
-
-      function locationInput(record, field, label) {
-        return '<input class="editable" value="' + escapeAttribute(record[field] || '') + '" data-record-key="' + escapeAttribute(record.record_key) + '" data-field="' + field + '" aria-label="' + label + '" placeholder="' + label + '" oninput="updateRecordField(event)">';
-      }
-
-      window.updateRecordField = function updateRecordField(event) {
-        const target = event.target;
-        const record = records.find((item) => item.record_key === target.dataset.recordKey);
-        if (!record) return;
-        if (target.dataset.field === 'labels') {
-          record.labels = target.value.split(',').map((label) => label.trim()).filter(Boolean);
-        } else {
-          record[target.dataset.field] = target.value;
-        }
-        record.updated_at = new Date().toISOString();
-        persistRecords();
-        renderSummary(records, filterRecords(records).length);
-      };
-
-      function statusBadges(record) {
+      function summarizeGroupBadges(records) {
         const badges = [];
-        if (record.is_missing_from_latest) badges.push('<span class="badge missing">Missing</span>');
-        if (record.is_new) badges.push('<span class="badge new">New</span>');
-        if (!record.assignee) badges.push('<span class="badge missing">Needs assignee</span>');
-        if (!hasLocation(record)) badges.push('<span class="badge missing">Needs location</span>');
-        if (record.discrepancy_status) badges.push('<span class="badge missing">Discrepancy</span>');
-        if (!badges.length) badges.push('<span class="badge ok">Reviewed</span>');
-        return badges.join(' ');
+        if (records.some(function (record) { return record.is_new === true; })) badges.push(badgeMarkup('info', 'Contains new items'));
+        if (records.some(hasDiscrepancy)) badges.push(badgeMarkup('danger', 'Has discrepancy'));
+        if (records.some(isMissingLocation)) badges.push(badgeMarkup('warning', 'Location gaps'));
+        if (!badges.length) badges.push(badgeMarkup('ok', 'Stable group'));
+        return badges;
       }
 
-      function hasLocation(record) {
-        return Boolean(record.location_area || record.location_building || record.location_room || record.location_container);
+      function renderSelection(records) {
+        const selected = getSelectedRecord(records);
+        const filterSummary = document.getElementById('filter-summary');
+        const selectionSummary = document.getElementById('selection-summary');
+        filterSummary.textContent = 'Showing ' + records.length + ' items for ' + state.activeFilter.replace(/-/g, ' ') + '.';
+        selectionSummary.textContent = selected ? 'Detail panel focused on ' + (safeText(selected.serial_number) || safeText(selected.lin) || 'selected item') + '.' : 'Select a row to review item detail.';
+
+        if (!selected) {
+          clearDetailFields();
+          document.getElementById('detail-status').innerHTML = badgeMarkup('neutral', 'No item selected');
+          document.getElementById('detail-subtitle').textContent = 'Select an item from the inventory views to review accountability, discrepancy, and location context.';
+          return;
+        }
+
+        document.getElementById('detail-subtitle').textContent = [safeText(selected.nsn_description) || safeText(selected.mpo_description), safeText(selected.unit)].filter(Boolean).join(' | ');
+        detailFields.serial_number.value = safeText(selected.serial_number) || 'No serial';
+        detailFields.lin.value = safeText(selected.lin);
+        detailFields.nsn.value = safeText(selected.nsn);
+        detailFields.oh_qty.value = safeText(selected.oh_qty);
+        detailFields.mpo_description.value = safeText(selected.nsn_description) || safeText(selected.mpo_description);
+        detailFields.assignee.value = safeText(selected.assignee);
+        detailFields.sub_holder.value = safeText(selected.sub_holder);
+        detailFields.discrepancy_status.value = safeText(selected.discrepancy_status);
+        detailFields.labels.value = Array.isArray(selected.labels) ? selected.labels.join(', ') : '';
+        detailFields.location_area.value = safeText(selected.location_area);
+        detailFields.location_building.value = safeText(selected.location_building);
+        detailFields.location_room.value = safeText(selected.location_room);
+        detailFields.location_container.value = safeText(selected.location_container);
+        detailFields.location_notes.value = safeText(selected.location_notes);
+        detailFields.last_reviewed_at.value = safeText(selected.last_reviewed_at);
+        detailFields.updated_at.value = safeText(selected.updated_at);
+        detailFields.notes.value = safeText(selected.notes);
+        document.getElementById('detail-status').innerHTML = buildStatusBadges(selected).join('');
+      }
+
+      function renderViewState() {
+        document.querySelectorAll('.view-pane').forEach(function (pane) {
+          pane.hidden = pane.id !== 'view-' + state.activeView;
+        });
+      }
+
+      function syncTabs() {
+        document.querySelectorAll('[data-view]').forEach(function (button) {
+          button.setAttribute('aria-selected', String(button.getAttribute('data-view') === state.activeView));
+        });
+      }
+
+      function syncFilterButtons() {
+        document.querySelectorAll('[data-filter]').forEach(function (button) {
+          button.setAttribute('aria-pressed', String(button.getAttribute('data-filter') === state.activeFilter));
+        });
+      }
+
+      function groupRecords(records, keyBuilder) {
+        const map = new Map();
+        records.forEach(function (record) {
+          const key = keyBuilder(record);
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(record);
+        });
+        return Array.from(map.entries()).sort(function (left, right) {
+          return right[1].length - left[1].length || String(left[0]).localeCompare(String(right[0]));
+        });
+      }
+
+      function buildInfoCard(title, description, badges) {
+        return [
+          '<article class="group-card">',
+          '<div class="group-card-header"><div><h3>' + escapeHtml(title) + '</h3><div class="group-meta">' + escapeHtml(description) + '</div></div></div>',
+          '<div class="group-list">' + badges.join('') + '</div>',
+          '</article>'
+        ].join('');
+      }
+
+      function buildStatusBadges(record) {
+        const badges = [];
+        if (record.is_missing_from_latest) badges.push(badgeMarkup('missing', 'Missing From Latest SHR'));
+        if (record.is_new) badges.push(badgeMarkup('info', 'New Item'));
+        if (hasDiscrepancy(record)) badges.push(badgeMarkup('danger', safeText(record.discrepancy_status) || 'Open Discrepancy'));
+        if (isMissingAssignee(record)) badges.push(badgeMarkup('warning', 'Needs Assignee'));
+        if (isMissingLocation(record)) badges.push(badgeMarkup('warning', 'Needs Location'));
+        if (!badges.length) badges.push(badgeMarkup('ok', 'Reviewed'));
+        if (Array.isArray(record.labels)) {
+          record.labels.slice(0, 2).forEach(function (label) {
+            badges.push(badgeMarkup('neutral', label));
+          });
+        }
+        return badges;
+      }
+
+      function badgeMarkup(tone, text) {
+        return '<span class="badge ' + tone + '">' + escapeHtml(text) + '</span>';
+      }
+
+      function getSelectedRecord(records) {
+        const selected = state.records.find(function (record) {
+          return record.record_key === state.selectedRecordKey;
+        });
+        if (selected) return selected;
+        if (records[0]) {
+          state.selectedRecordKey = records[0].record_key;
+          return records[0];
+        }
+        return null;
+      }
+
+      function clearDetailFields() {
+        Object.keys(detailFields).forEach(function (key) {
+          detailFields[key].value = '';
+        });
+      }
+
+      function updateSelectedRecordField(event) {
+        const selected = state.records.find(function (record) {
+          return record.record_key === state.selectedRecordKey;
+        });
+        if (!selected) return;
+
+        const field = event.target.getAttribute('data-field');
+        if (!field) return;
+        if (field === 'labels') {
+          selected.labels = event.target.value.split(',').map(function (label) {
+            return label.trim();
+          }).filter(Boolean);
+        } else {
+          selected[field] = event.target.value;
+        }
+        selected.updated_at = new Date().toISOString();
+        detailFields.updated_at.value = selected.updated_at;
+        persistRecords();
+        renderDashboard();
+      }
+
+      function isMissingAssignee(record) {
+        return !safeText(record.assignee);
+      }
+
+      function isMissingLocation(record) {
+        return !locationSummary(record);
+      }
+
+      function hasDiscrepancy(record) {
+        const value = safeText(record.discrepancy_status).toLowerCase();
+        return Boolean(value) && value !== 'resolved' && value !== 'closed';
+      }
+
+      function locationSummary(record) {
+        return [
+          safeText(record.location_area),
+          safeText(record.location_building),
+          safeText(record.location_room),
+          safeText(record.location_container)
+        ].filter(Boolean).join(' / ');
+      }
+
+      function riskScore(record) {
+        let score = 0;
+        if (record.is_missing_from_latest) score += 14;
+        if (hasDiscrepancy(record)) score += 10;
+        if (isMissingAssignee(record)) score += 8;
+        if (isMissingLocation(record)) score += 8;
+        if (record.is_new) score += 4;
+        if (safeText(record.merge_confidence) && safeText(record.merge_confidence) !== 'serial_number' && safeText(record.merge_confidence) !== 'high') score += 3;
+        if (!safeText(record.last_reviewed_at)) score += 2;
+        return score;
+      }
+
+      function safeText(value) {
+        return String(value == null ? '' : value).trim();
       }
 
       function persistRecords() {
         try {
-          localStorage.setItem(storageKey, JSON.stringify({ metadata: payload.metadata || {}, records: records }));
+          localStorage.setItem(storageKey, JSON.stringify({ metadata: rootPayload.metadata || {}, records: state.records }));
           setStatus('Local changes saved in this browser.');
         } catch (error) {
           setStatus('Local changes could not be saved.');
@@ -642,14 +1442,14 @@
       function saveDashboardHtml() {
         const clone = document.documentElement.cloneNode(true);
         const script = clone.querySelector('#shr-dashboard-bootstrap');
-        const nextPayload = { metadata: Object.assign({}, payload.metadata || {}, { saved_at: new Date().toISOString() }), records: records };
-        script.textContent = JSON.stringify(nextPayload, null, 2).replaceAll('</', '<\\/');
+        const nextPayload = { metadata: Object.assign({}, rootPayload.metadata || {}, { saved_at: new Date().toISOString() }), records: state.records };
+        script.textContent = JSON.stringify(nextPayload, null, 2).replace(/<\//g, '<\\/');
         downloadFile('<!DOCTYPE html>\n' + clone.outerHTML, 'shr_command_dashboard_saved.html', 'text/html');
         setStatus('Dashboard HTML exported with current annotations.');
       }
 
       function exportJsonBackup() {
-        downloadFile(JSON.stringify({ metadata: payload.metadata || {}, records: records }, null, 2), 'shr_dashboard_backup.json', 'application/json');
+        downloadFile(JSON.stringify({ metadata: rootPayload.metadata || {}, records: state.records }, null, 2), 'shr_dashboard_backup.json', 'application/json');
         setStatus('JSON backup exported.');
       }
 
@@ -661,7 +1461,8 @@
           try {
             const imported = JSON.parse(reader.result);
             if (!Array.isArray(imported.records)) throw new Error('records array missing');
-            records = imported.records.map((record) => normalizeRecord(record));
+            state.records = imported.records.map(normalizeRecord);
+            if (state.records[0]) state.selectedRecordKey = state.records[0].record_key;
             persistRecords();
             renderDashboard();
             setStatus('JSON backup imported.');
@@ -675,12 +1476,14 @@
       }
 
       function exportInventoryCsv() {
-        exportCsv(records, 'shr_dashboard_inventory.csv');
+        exportCsv(state.records, 'shr_dashboard_inventory.csv');
         setStatus('Inventory CSV exported.');
       }
 
       function exportDiscrepancyCsv() {
-        const discrepancies = records.filter((record) => record.discrepancy_status || record.is_missing_from_latest || !record.assignee || !hasLocation(record));
+        const discrepancies = state.records.filter(function (record) {
+          return hasDiscrepancy(record) || record.is_missing_from_latest || isMissingAssignee(record) || isMissingLocation(record);
+        });
         exportCsv(discrepancies, 'shr_dashboard_discrepancies.csv');
         setStatus('Discrepancies CSV exported.');
       }
@@ -706,16 +1509,20 @@
           'is_new',
           'is_missing_from_latest'
         ];
-        const lines = [columns.join(',')].concat(source.map((record) => (
-          columns.map((column) => csvCell(Array.isArray(record[column]) ? record[column].join('; ') : record[column])).join(',')
-        )));
+        const lines = [columns.join(',')].concat(source.map(function (record) {
+          return columns.map(function (column) {
+            const value = Array.isArray(record[column]) ? record[column].join('; ') : record[column];
+            return csvCell(value);
+          }).join(',');
+        }));
         downloadFile(lines.join('\n'), filename, 'text/csv');
       }
 
       function clearLocalChanges() {
         if (!confirm('Clear local edits for this dashboard file?')) return;
         localStorage.removeItem(storageKey);
-        records = (payload.records || []).map((record) => normalizeRecord(record));
+        state.records = (rootPayload.records || []).map(normalizeRecord);
+        state.selectedRecordKey = state.records[0] ? state.records[0].record_key : '';
         renderDashboard();
         setStatus('Local changes cleared.');
       }
@@ -734,11 +1541,7 @@
 
       function csvCell(value) {
         const text = String(value == null ? '' : value);
-        return '"' + text.replaceAll('"', '""') + '"';
-      }
-
-      function setText(id, value) {
-        document.getElementById(id).textContent = String(value);
+        return '"' + text.replace(/"/g, '""') + '"';
       }
 
       function setStatus(message) {
@@ -748,15 +1551,11 @@
 
       function escapeHtml(value) {
         return String(value == null ? '' : value)
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", '&#39;');
-      }
-
-      function escapeAttribute(value) {
-        return escapeHtml(value).replaceAll('\n', '&#10;');
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
       }
     }());
   </script>
