@@ -3,46 +3,449 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SHR Extractor</title>
+  <title>SHR Command Dashboard</title>
   <style>
+    :root {
+      color-scheme: light;
+      --bg-canvas: #f3f1ea;
+      --bg-panel: #fbf8f1;
+      --bg-panel-strong: #e5dfd0;
+      --bg-band: #ede7da;
+      --ink-strong: #1f2a2e;
+      --ink-body: #344248;
+      --ink-muted: #66757c;
+      --line-subtle: #c7c0b1;
+      --line-strong: #8f866f;
+      --accent-command: #2f5d50;
+      --accent-command-strong: #1f4339;
+      --accent-attention: #b15b2d;
+      --accent-danger: #8f2d23;
+      --shadow: 0 14px 34px rgba(54, 45, 32, 0.08);
+      --radius-panel: 8px;
+      --radius-control: 6px;
+      --motion-fast: 140ms ease;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-    .card { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; padding: 40px; max-width: 520px; width: 100%; }
-    h1 { color: #e94560; font-size: 1.6rem; margin-bottom: 6px; }
-    .subtitle { color: #a0a0b0; font-size: 0.9rem; margin-bottom: 28px; }
-    .drop-zone { border: 2px dashed #0f3460; border-radius: 6px; padding: 40px 20px; text-align: center; cursor: pointer; transition: border-color 0.2s; margin-bottom: 20px; }
-    .drop-zone:hover, .drop-zone.drag-over { border-color: #e94560; }
-    .drop-zone p { color: #a0a0b0; margin-top: 8px; font-size: 0.9rem; }
-    .drop-zone .icon { font-size: 2.5rem; }
+
+    body {
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink-body);
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(47, 93, 80, 0.08), transparent 28%),
+        linear-gradient(180deg, var(--bg-band) 0%, var(--bg-canvas) 34%, #f7f4ec 100%);
+    }
+
+    .shell {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 32px 18px 40px;
+    }
+
+    .masthead {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.95fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(251, 248, 241, 0.96), rgba(245, 240, 230, 0.98));
+      border: 1px solid var(--line-subtle);
+      border-radius: var(--radius-panel);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      color: var(--accent-command);
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 22px;
+      height: 2px;
+      background: var(--accent-attention);
+    }
+
+    h1 {
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink-strong);
+      font-size: clamp(2rem, 3.4vw, 2.8rem);
+      line-height: 1.04;
+      max-width: 10ch;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      max-width: 56ch;
+      font-size: 1rem;
+      line-height: 1.5;
+      color: var(--ink-body);
+    }
+
+    .bullet-line {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--ink-muted);
+      font-size: 0.88rem;
+    }
+
+    .bullet-line span {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .bullet-line span::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-command);
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+    }
+
+    .sidecar {
+      padding: 22px 22px 20px;
+      display: grid;
+      gap: 14px;
+      background:
+        linear-gradient(180deg, rgba(229, 223, 208, 0.52), rgba(251, 248, 241, 0.94)),
+        var(--bg-panel);
+    }
+
+    .sidecar h2 {
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink-strong);
+      font-size: 1.2rem;
+    }
+
+    .sidecar-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .mini-stat {
+      padding: 12px;
+      border: 1px solid var(--line-subtle);
+      border-radius: var(--radius-control);
+      background: rgba(255, 255, 255, 0.56);
+    }
+
+    .mini-stat strong {
+      display: block;
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--ink-strong);
+      font-size: 1rem;
+      margin-bottom: 4px;
+    }
+
+    .mini-stat span {
+      font-size: 0.76rem;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+    }
+
+    .surface {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+      gap: 18px;
+    }
+
+    .card {
+      padding: 22px;
+    }
+
+    .card h2 {
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink-strong);
+      font-size: 1.18rem;
+      margin-bottom: 10px;
+    }
+
+    .callout {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(177, 91, 45, 0.24);
+      background: rgba(177, 91, 45, 0.1);
+      color: #8a4d23;
+      font-size: 0.82rem;
+      margin-bottom: 14px;
+    }
+
+    .callout::before {
+      content: "!";
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff7ef;
+      border: 1px solid rgba(177, 91, 45, 0.35);
+      font-weight: 700;
+    }
+
+    .drop-zone {
+      margin: 16px 0 18px;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--radius-panel);
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color var(--motion-fast), transform var(--motion-fast), background-color var(--motion-fast);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(243, 241, 234, 0.78));
+    }
+
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--accent-command);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(236, 244, 241, 0.9));
+      transform: translateY(-1px);
+    }
+
+    .drop-zone:focus-visible,
+    .btn:focus-visible {
+      outline: 3px solid rgba(196, 138, 24, 0.58);
+      outline-offset: 2px;
+    }
+
+    .icon-wrap {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 12px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(180deg, rgba(47, 93, 80, 0.14), rgba(47, 93, 80, 0.05));
+      color: var(--accent-command-strong);
+    }
+
+    .drop-zone strong {
+      display: block;
+      color: var(--ink-strong);
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .drop-zone p {
+      color: var(--ink-muted);
+      font-size: 0.9rem;
+    }
+
     input[type="file"] { display: none; }
-    .filename { color: #e0e0e0; font-size: 0.9rem; margin-top: 8px; }
-    .btn { background: #e94560; color: white; border: none; padding: 12px 28px; border-radius: 5px; font-size: 1rem; cursor: pointer; width: 100%; margin-top: 4px; }
-    .btn:hover { background: #c73652; }
-    .btn:disabled { background: #555; cursor: not-allowed; }
-    .error { background: #3a1a1a; border: 1px solid #e94560; color: #ff6b6b; padding: 12px; border-radius: 5px; margin-bottom: 16px; font-size: 0.9rem; }
-    .info { color: #a0a0b0; font-size: 0.8rem; margin-top: 16px; text-align: center; }
+
+    .filename {
+      margin-top: 12px;
+      color: var(--accent-command-strong);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.86rem;
+      overflow-wrap: anywhere;
+    }
+
+    .btn {
+      width: 100%;
+      border: 1px solid var(--accent-command);
+      border-radius: var(--radius-control);
+      padding: 12px 18px;
+      background: linear-gradient(180deg, var(--accent-command), var(--accent-command-strong));
+      color: #f7f3ea;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform var(--motion-fast), box-shadow var(--motion-fast), filter var(--motion-fast);
+      box-shadow: 0 10px 18px rgba(31, 67, 57, 0.16);
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      filter: saturate(1.03);
+    }
+
+    .btn:disabled {
+      background: linear-gradient(180deg, #9d988d, #857f73);
+      border-color: #8c8678;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .error {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-left: 4px solid var(--accent-danger);
+      border-radius: 6px;
+      background: #fbefed;
+      color: #74261f;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .info-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: var(--ink-body);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .info-row .mark {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 0.83rem;
+      color: var(--accent-command-strong);
+      background: rgba(47, 93, 80, 0.11);
+      border: 1px solid rgba(47, 93, 80, 0.18);
+    }
+
+    .footnote {
+      margin-top: 16px;
+      color: var(--ink-muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 940px) {
+      .masthead,
+      .surface {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        padding: 24px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>SHR Extractor</h1>
-    <p class="subtitle">Upload a Sub Hand Receipt PDF — extracts LIN, NSN, serial numbers, and OH quantities.</p>
-
-    {% if error %}
-    <div class="error">{{ error }}</div>
-    {% endif %}
-
-    <form method="POST" action="/extract" enctype="multipart/form-data" id="uploadForm">
-      <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()">
-        <div class="icon">📄</div>
-        <p>Drop SHR PDF here or click to browse</p>
-        <div class="filename" id="filename"></div>
+  <div class="shell">
+    <section class="masthead">
+      <div class="panel hero">
+        <p class="eyebrow">Command Dashboard Generator</p>
+        <h1>Property accountability, shaped for command review.</h1>
+        <p class="subtitle">
+          Upload a Sub Hand Receipt PDF to generate a local command dashboard commanders can review by exception, annotate daily, and keep offline.
+        </p>
+        <div class="bullet-line" aria-label="Core workflow highlights">
+          <span>Signed down to</span>
+          <span>Current location</span>
+          <span>Discrepancy notes</span>
+          <span>Local-only export</span>
+        </div>
       </div>
-      <input type="file" id="pdfInput" name="pdf" accept=".pdf" onchange="showFilename(this)">
-      <button type="submit" class="btn" id="submitBtn" disabled>Extract Property Data</button>
-    </form>
 
-    <p class="info">Data never leaves this server. Output available as CSV or JSON.</p>
+      <aside class="panel sidecar" aria-label="Operational summary">
+        <h2>Field-ready workflow</h2>
+        <div class="sidecar-grid">
+          <div class="mini-stat">
+            <strong>Local</strong>
+            <span>No cloud dependency</span>
+          </div>
+          <div class="mini-stat">
+            <strong>Serial</strong>
+            <span>Trackable item view</span>
+          </div>
+          <div class="mini-stat">
+            <strong>Exception</strong>
+            <span>Review by risk first</span>
+          </div>
+          <div class="mini-stat">
+            <strong>Offline</strong>
+            <span>Portable HTML output</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="surface">
+      <div class="panel card">
+        <div class="callout">Saved dashboard files contain embedded property accountability data.</div>
+        <h2>Start with a current SHR PDF</h2>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/extract" enctype="multipart/form-data" id="uploadForm">
+          <div class="drop-zone" id="dropZone" onclick="document.getElementById('pdfInput').click()" role="button" tabindex="0" aria-controls="pdfInput">
+            <div class="icon-wrap" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path>
+                <path d="M14 3v5h5"></path>
+                <path d="M9 13h6"></path>
+                <path d="M9 17h6"></path>
+              </svg>
+            </div>
+            <strong>Drop SHR PDF here or click to browse</strong>
+            <p>Parse serial-level inventory now, then export a commander-ready dashboard.</p>
+            <div class="filename" id="filename"></div>
+          </div>
+          <input type="file" id="pdfInput" name="pdf" accept=".pdf" onchange="showFilename(this)">
+          <button type="submit" class="btn" id="submitBtn" disabled>Generate Command View</button>
+        </form>
+      </div>
+
+      <aside class="panel card">
+        <h2>What this pass gives you</h2>
+        <div class="info-list">
+          <div class="info-row">
+            <div class="mark" aria-hidden="true">1</div>
+            <div>Extracts LIN, NSN, quantity, and serial-level records from the uploaded SHR.</div>
+          </div>
+          <div class="info-row">
+            <div class="mark" aria-hidden="true">2</div>
+            <div>Prepares a local dashboard file for assignee, location, and discrepancy tracking.</div>
+          </div>
+          <div class="info-row">
+            <div class="mark" aria-hidden="true">3</div>
+            <div>Keeps the workflow local so the exported HTML can travel without server access.</div>
+          </div>
+        </div>
+        <p class="footnote">Data never leaves this workstation during generation. Review storage and sharing practices before distributing saved dashboard files.</p>
+      </aside>
+    </section>
   </div>
 
   <script>
@@ -69,6 +472,13 @@
         dt.items.add(files[0]);
         input.files = dt.files;
         showFilename(input);
+      }
+    });
+
+    dropZone.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        input.click();
       }
     });
   </script>

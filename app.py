@@ -9,8 +9,10 @@ import json
 import os
 import tempfile
 
-from flask import Flask, jsonify, render_template, request, Response, session
+from flask import Flask, render_template, request, Response
 
+from dashboard_export import render_dashboard_html
+from dashboard_records import normalize_extractor_records
 from extract_shr import parse_shr_pdf, to_csv, to_csv_aggregated, aggregate_records
 
 app = Flask(__name__)
@@ -18,6 +20,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'shr-extractor-dev')
 
 # Store last extraction in-process (single-user tool; no persistence needed)
 _last_records = []
+_last_dashboard_records = []
 
 
 @app.route('/')
@@ -27,7 +30,7 @@ def index():
 
 @app.route('/extract', methods=['POST'])
 def extract():
-    global _last_records
+    global _last_records, _last_dashboard_records
 
     if 'pdf' not in request.files or request.files['pdf'].filename == '':
         return render_template('index.html', error="No file selected.")
@@ -52,8 +55,15 @@ def extract():
             pass
 
     _last_records = records
+    _last_dashboard_records = normalize_extractor_records(records)
     agg = aggregate_records(records)
-    return render_template('results.html', records=agg, raw_count=len(records), count=len(agg))
+    return render_template(
+        'results.html',
+        records=agg,
+        raw_count=len(records),
+        count=len(agg),
+        dashboard_count=len(_last_dashboard_records),
+    )
 
 
 @app.route('/download/csv')
@@ -88,6 +98,26 @@ def download_json():
         json.dumps(_last_records, indent=2),
         mimetype='application/json',
         headers={'Content-Disposition': 'attachment; filename=shr_extract.json'}
+    )
+
+
+@app.route('/download/dashboard')
+def download_dashboard():
+    if not _last_records:
+        return "No data. Upload a PDF first.", 400
+
+    dashboard_records = _last_dashboard_records or normalize_extractor_records(_last_records)
+    html = render_dashboard_html(
+        dashboard_records,
+        {
+            "source_record_count": len(_last_records),
+            "dashboard_record_count": len(dashboard_records),
+        },
+    )
+    return Response(
+        html,
+        mimetype='text/html',
+        headers={'Content-Disposition': 'attachment; filename=shr_command_dashboard.html'}
     )
 
 

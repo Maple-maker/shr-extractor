@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>SHR Command Dashboard</title>
+  <style>
+    :root {
+      --bg-canvas: #f3f1ea;
+      --bg-panel: #fbf8f1;
+      --bg-panel-strong: #e5dfd0;
+      --ink-strong: #1f2a2e;
+      --ink-body: #344248;
+      --ink-muted: #66757c;
+      --line-subtle: #c7c0b1;
+      --line-strong: #8f866f;
+      --accent-command: #2f5d50;
+      --accent-command-strong: #1f4339;
+      --accent-attention: #b15b2d;
+      --accent-danger: #8f2d23;
+      --accent-info: #315f7d;
+      --status-ok: #567a35;
+      --focus: #b15b2d;
+      --font-heading: Georgia, "Times New Roman", serif;
+      --font-ui: "Trebuchet MS", "Segoe UI", sans-serif;
+      --font-data: Consolas, "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { margin: 0; min-height: 100%; }
+
+    body {
+      background: var(--bg-canvas);
+      color: var(--ink-body);
+      font-family: var(--font-ui);
+      font-size: 15px;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      min-height: 36px;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      padding: 7px 11px;
+      background: var(--bg-panel);
+      color: var(--ink-strong);
+      cursor: pointer;
+    }
+
+    button:hover { border-color: var(--accent-command); }
+
+    button.primary {
+      background: var(--accent-command);
+      border-color: var(--accent-command);
+      color: #fff;
+    }
+
+    button.danger {
+      border-color: var(--accent-danger);
+      color: var(--accent-danger);
+    }
+
+    :focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    .command-bar {
+      display: grid;
+      grid-template-columns: minmax(280px, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line-subtle);
+      background: var(--bg-panel);
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+
+    h1 {
+      margin: 0;
+      color: var(--ink-strong);
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+      line-height: 1.1;
+    }
+
+    .meta {
+      margin-top: 4px;
+      color: var(--ink-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.86rem;
+    }
+
+    .actions,
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .privacy {
+      padding: 10px 18px;
+      border-bottom: 1px solid #d6b28a;
+      background: #f6e4ce;
+      color: #5a321e;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      min-height: 0;
+    }
+
+    aside {
+      border-right: 1px solid var(--line-subtle);
+      background: #ede8dd;
+      padding: 14px;
+      overflow: auto;
+    }
+
+    main {
+      min-width: 0;
+      padding: 14px;
+      overflow: auto;
+    }
+
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .tile {
+      border: 1px solid var(--line-subtle);
+      border-radius: 6px;
+      background: var(--bg-panel);
+      padding: 10px;
+    }
+
+    .tile strong {
+      display: block;
+      color: var(--ink-strong);
+      font-family: var(--font-data);
+      font-size: 1.45rem;
+      line-height: 1;
+    }
+
+    .tile span {
+      display: block;
+      margin-top: 4px;
+      color: var(--ink-muted);
+      font-size: 0.78rem;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .controls label {
+      display: grid;
+      gap: 5px;
+      color: var(--ink-strong);
+      font-size: 0.84rem;
+      font-weight: 700;
+    }
+
+    input[type="search"],
+    select {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: #fffdf8;
+      color: var(--ink-strong);
+      min-height: 36px;
+      padding: 7px 9px;
+    }
+
+    .status-line {
+      min-height: 22px;
+      color: var(--accent-command-strong);
+      font-size: 0.86rem;
+    }
+
+    .table-wrap {
+      border: 1px solid var(--line-subtle);
+      border-radius: 8px;
+      background: var(--bg-panel);
+      overflow: auto;
+      max-height: calc(100vh - 200px);
+    }
+
+    table {
+      width: 100%;
+      min-width: 1180px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line-subtle);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--bg-panel-strong);
+      color: var(--ink-strong);
+      font-size: 0.78rem;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody tr:focus-within,
+    tbody tr:hover {
+      background: #fff8ea;
+    }
+
+    .key {
+      color: var(--ink-strong);
+      font-family: var(--font-data);
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid var(--line-subtle);
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: #fffdf8;
+      color: var(--ink-strong);
+      font-size: 0.76rem;
+      white-space: nowrap;
+    }
+
+    .badge.missing { border-color: var(--accent-danger); color: var(--accent-danger); }
+    .badge.new { border-color: var(--accent-info); color: var(--accent-info); }
+    .badge.ok { border-color: var(--status-ok); color: var(--status-ok); }
+
+    .editable {
+      width: 100%;
+      min-width: 130px;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--ink-strong);
+      padding: 6px;
+    }
+
+    .editable:hover,
+    .editable:focus {
+      border-color: var(--line-strong);
+      background: #fffdf8;
+    }
+
+    textarea.editable {
+      min-height: 58px;
+      resize: vertical;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .skip-link {
+      position: absolute;
+      left: 12px;
+      top: -48px;
+      z-index: 4;
+      border-radius: 6px;
+      padding: 9px 12px;
+      background: var(--accent-command-strong);
+      color: #fff;
+    }
+
+    .skip-link:focus {
+      top: 12px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
+    @media (max-width: 920px) {
+      .command-bar,
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+
+      .command-bar { position: static; }
+      aside { border-right: 0; border-bottom: 1px solid var(--line-subtle); }
+      .table-wrap { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-dashboard-content">Skip to main dashboard content</a>
+  <div class="shell">
+    <header class="command-bar">
+      <div>
+        <h1>SHR Command Dashboard</h1>
+        <div class="meta" aria-label="Export metadata">
+          <span>Generated: <span id="generated-at">{{ generated_at }}</span></span>
+          <span>Records: <span id="record-count">{{ record_count }}</span></span>
+          <span>Offline local HTML</span>
+        </div>
+      </div>
+      <div class="actions" aria-label="Dashboard actions">
+        <button class="primary" type="button" onclick="saveDashboardHtml()">Save Dashboard HTML</button>
+        <button type="button" onclick="exportJsonBackup()">Export JSON Backup</button>
+        <label>
+          <span class="sr-only">Import JSON Backup</span>
+          <input class="sr-only" id="backup-import" type="file" accept="application/json,.json" onchange="importJsonBackup(event)">
+          <button type="button" onclick="document.getElementById('backup-import').click()">Import JSON Backup</button>
+        </label>
+        <button type="button" onclick="exportInventoryCsv()">Export Inventory CSV</button>
+        <button type="button" title="Export Discrepancy CSV" onclick="exportDiscrepancyCsv()">Export Discrepancies CSV</button>
+        <button class="danger" type="button" onclick="clearLocalChanges()">Clear Local Changes</button>
+      </div>
+    </header>
+
+    <section class="privacy" aria-label="Privacy warning">
+      <strong>Privacy warning:</strong>
+      This saved HTML file contains embedded property book data and commander-entered notes. Store it only on approved local systems.
+    </section>
+
+    <div class="dashboard">
+      <aside aria-label="Exception summary">
+        <div class="tile-grid">
+          <div class="tile"><strong id="needs-assignee">0</strong><span>Needs Assignee</span></div>
+          <div class="tile"><strong id="needs-location">0</strong><span>Needs Location</span></div>
+          <div class="tile"><strong id="open-discrepancy">0</strong><span>Open Discrepancy</span></div>
+          <div class="tile"><strong id="new-items">0</strong><span>New Items</span></div>
+          <div class="tile"><strong id="missing-items">0</strong><span>Missing From Latest SHR</span></div>
+          <div class="tile"><strong id="visible-count">0</strong><span>Visible Items</span></div>
+        </div>
+
+        <div class="controls" aria-label="Inventory filters">
+          <label>
+            Search
+            <input id="search" type="search" placeholder="LIN, NSN, serial, assignee..." oninput="renderDashboard()">
+          </label>
+          <label>
+            Exception Filter
+            <select id="exception-filter" onchange="renderDashboard()">
+              <option value="all">All Items</option>
+              <option value="needs_assignee">Needs Assignee</option>
+              <option value="needs_location">Needs Location</option>
+              <option value="open_discrepancy">Open Discrepancy</option>
+              <option value="new">New Items</option>
+              <option value="missing">Missing From Latest SHR</option>
+            </select>
+          </label>
+          <div id="save-status" class="status-line" role="status" aria-live="polite"></div>
+          <div class="status-line">Offline-safe. No network dependencies. Status is labeled in text, not just color.</div>
+        </div>
+      </aside>
+
+      <main id="main-dashboard-content" aria-label="Inventory workspace" tabindex="-1">
+        <div class="sr-only" aria-hidden="true">
+          <span data-field="assignee"></span>
+          <span data-field="notes"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>LIN / NSN</th>
+                <th>Description</th>
+                <th>Serial</th>
+                <th>Signed Down To</th>
+                <th>Sub-holder</th>
+                <th>Current Location</th>
+                <th>Discrepancy</th>
+                <th>Labels</th>
+                <th>Notes</th>
+                <th>Last Reviewed</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-body"></tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script id="shr-dashboard-bootstrap" type="application/json">{{ bootstrap_json }}</script>
+  <script>
+    (function () {
+      const bootstrapElement = document.getElementById('shr-dashboard-bootstrap');
+      let payload;
+
+      try {
+        payload = JSON.parse(bootstrapElement.textContent);
+      } catch (error) {
+        document.body.innerHTML = '<main style="padding:20px;font-family:sans-serif" role="alert">Embedded dashboard data could not be parsed.</main>';
+        return;
+      }
+
+      const storageKey = 'shr-command-dashboard:' + ((payload.metadata && payload.metadata.generated_at) || 'local');
+      window.__SHR_DASHBOARD_BOOTSTRAP__ = payload;
+      window.__DASHBOARD_DATA__ = payload.records || [];
+
+      let records = loadRecords(payload.records || []);
+      renderDashboard();
+
+      window.saveDashboardHtml = saveDashboardHtml;
+      window.exportJsonBackup = exportJsonBackup;
+      window.importJsonBackup = importJsonBackup;
+      window.exportInventoryCsv = exportInventoryCsv;
+      window.exportDiscrepancyCsv = exportDiscrepancyCsv;
+      window.clearLocalChanges = clearLocalChanges;
+      window.renderDashboard = renderDashboard;
+
+      function loadRecords(defaultRecords) {
+        try {
+          const saved = localStorage.getItem(storageKey);
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed.records)) {
+              setStatus('Loaded local changes.');
+              return parsed.records;
+            }
+          }
+        } catch (error) {
+          setStatus('Local changes could not be loaded.');
+        }
+        return defaultRecords.map((record) => normalizeRecord(record));
+      }
+
+      function normalizeRecord(record) {
+        const normalized = Object.assign({
+          record_key: '',
+          record_id: '',
+          unit: '',
+          date: '',
+          lin: '',
+          mpo_description: '',
+          nsn: '',
+          nsn_description: '',
+          oh_qty: '',
+          serial_number: '',
+          assignee: '',
+          sub_holder: '',
+          location_area: '',
+          location_building: '',
+          location_room: '',
+          location_container: '',
+          location_notes: '',
+          labels: [],
+          discrepancy_status: '',
+          notes: '',
+          last_reviewed_at: '',
+          updated_at: '',
+          is_new: false,
+          is_missing_from_latest: false,
+          merge_confidence: ''
+        }, record);
+        if (!normalized.record_key) {
+          normalized.record_key = normalized.record_id || normalized.serial_number || Math.random().toString(36).slice(2);
+        }
+        if (!Array.isArray(normalized.labels)) {
+          normalized.labels = String(normalized.labels || '').split(',').map((label) => label.trim()).filter(Boolean);
+        }
+        return normalized;
+      }
+
+      function renderDashboard() {
+        records = records.map((record) => normalizeRecord(record));
+        const filtered = filterRecords(records);
+        renderSummary(records, filtered.length);
+        renderRows(filtered);
+        window.__DASHBOARD_DATA__ = records;
+      }
+
+      function filterRecords(source) {
+        const query = document.getElementById('search').value.trim().toLowerCase();
+        const exceptionFilter = document.getElementById('exception-filter').value;
+        return source.filter((record) => {
+          const haystack = [
+            record.lin,
+            record.nsn,
+            record.nsn_description,
+            record.mpo_description,
+            record.serial_number,
+            record.assignee,
+            record.sub_holder,
+            record.location_area,
+            record.location_room,
+            record.notes
+          ].join(' ').toLowerCase();
+          if (query && !haystack.includes(query)) return false;
+          if (exceptionFilter === 'needs_assignee') return !record.assignee;
+          if (exceptionFilter === 'needs_location') return !hasLocation(record);
+          if (exceptionFilter === 'open_discrepancy') return Boolean(record.discrepancy_status);
+          if (exceptionFilter === 'new') return record.is_new === true;
+          if (exceptionFilter === 'missing') return record.is_missing_from_latest === true;
+          return true;
+        });
+      }
+
+      function renderSummary(source, visibleCount) {
+        setText('needs-assignee', source.filter((record) => !record.assignee).length);
+        setText('needs-location', source.filter((record) => !hasLocation(record)).length);
+        setText('open-discrepancy', source.filter((record) => Boolean(record.discrepancy_status)).length);
+        setText('new-items', source.filter((record) => record.is_new === true).length);
+        setText('missing-items', source.filter((record) => record.is_missing_from_latest === true).length);
+        setText('visible-count', visibleCount);
+        setText('record-count', source.length);
+      }
+
+      function renderRows(source) {
+        const tbody = document.getElementById('inventory-body');
+        tbody.innerHTML = '';
+        if (!source.length) {
+          const row = document.createElement('tr');
+          row.innerHTML = '<td colspan="11">No inventory items match the current filter.</td>';
+          tbody.appendChild(row);
+          return;
+        }
+
+        source.forEach((record) => {
+          const row = document.createElement('tr');
+          row.dataset.recordKey = record.record_key;
+          row.innerHTML = [
+            '<td>' + statusBadges(record) + '</td>',
+            '<td><div class="key">' + escapeHtml(record.lin) + '</div><div>' + escapeHtml(record.nsn) + '</div><div class="key">Qty ' + escapeHtml(record.oh_qty) + '</div></td>',
+            '<td>' + escapeHtml(record.nsn_description || record.mpo_description) + '</td>',
+            '<td class="key">' + escapeHtml(record.serial_number || 'No serial') + '</td>',
+            editableCell(record, 'assignee', 'input'),
+            editableCell(record, 'sub_holder', 'input'),
+            locationCell(record),
+            editableCell(record, 'discrepancy_status', 'input'),
+            editableCell(Object.assign({}, record, { labels: record.labels.join(', ') }), 'labels', 'input'),
+            editableCell(record, 'notes', 'textarea'),
+            editableCell(record, 'last_reviewed_at', 'input')
+          ].join('');
+          tbody.appendChild(row);
+        });
+      }
+
+      function editableCell(record, field, type) {
+        const value = Array.isArray(record[field]) ? record[field].join(', ') : (record[field] || '');
+        const shared = 'class="editable" data-record-key="' + escapeAttribute(record.record_key) + '" data-field="' + field + '" aria-label="' + field.replaceAll('_', ' ') + '" oninput="updateRecordField(event)"';
+        if (type === 'textarea') {
+          return '<td><textarea ' + shared + '>' + escapeHtml(value) + '</textarea></td>';
+        }
+        return '<td><input ' + shared + ' value="' + escapeAttribute(value) + '"></td>';
+      }
+
+      function locationCell(record) {
+        return '<td>' +
+          locationInput(record, 'location_area', 'Area') +
+          locationInput(record, 'location_building', 'Building') +
+          locationInput(record, 'location_room', 'Room') +
+          locationInput(record, 'location_container', 'Container') +
+          locationInput(record, 'location_notes', 'Location notes') +
+          '</td>';
+      }
+
+      function locationInput(record, field, label) {
+        return '<input class="editable" value="' + escapeAttribute(record[field] || '') + '" data-record-key="' + escapeAttribute(record.record_key) + '" data-field="' + field + '" aria-label="' + label + '" placeholder="' + label + '" oninput="updateRecordField(event)">';
+      }
+
+      window.updateRecordField = function updateRecordField(event) {
+        const target = event.target;
+        const record = records.find((item) => item.record_key === target.dataset.recordKey);
+        if (!record) return;
+        if (target.dataset.field === 'labels') {
+          record.labels = target.value.split(',').map((label) => label.trim()).filter(Boolean);
+        } else {
+          record[target.dataset.field] = target.value;
+        }
+        record.updated_at = new Date().toISOString();
+        persistRecords();
+        renderSummary(records, filterRecords(records).length);
+      };
+
+      function statusBadges(record) {
+        const badges = [];
+        if (record.is_missing_from_latest) badges.push('<span class="badge missing">Missing</span>');
+        if (record.is_new) badges.push('<span class="badge new">New</span>');
+        if (!record.assignee) badges.push('<span class="badge missing">Needs assignee</span>');
+        if (!hasLocation(record)) badges.push('<span class="badge missing">Needs location</span>');
+        if (record.discrepancy_status) badges.push('<span class="badge missing">Discrepancy</span>');
+        if (!badges.length) badges.push('<span class="badge ok">Reviewed</span>');
+        return badges.join(' ');
+      }
+
+      function hasLocation(record) {
+        return Boolean(record.location_area || record.location_building || record.location_room || record.location_container);
+      }
+
+      function persistRecords() {
+        try {
+          localStorage.setItem(storageKey, JSON.stringify({ metadata: payload.metadata || {}, records: records }));
+          setStatus('Local changes saved in this browser.');
+        } catch (error) {
+          setStatus('Local changes could not be saved.');
+        }
+      }
+
+      function saveDashboardHtml() {
+        const clone = document.documentElement.cloneNode(true);
+        const script = clone.querySelector('#shr-dashboard-bootstrap');
+        const nextPayload = { metadata: Object.assign({}, payload.metadata || {}, { saved_at: new Date().toISOString() }), records: records };
+        script.textContent = JSON.stringify(nextPayload, null, 2).replaceAll('</', '<\\/');
+        downloadFile('<!DOCTYPE html>\n' + clone.outerHTML, 'shr_command_dashboard_saved.html', 'text/html');
+        setStatus('Dashboard HTML exported with current annotations.');
+      }
+
+      function exportJsonBackup() {
+        downloadFile(JSON.stringify({ metadata: payload.metadata || {}, records: records }, null, 2), 'shr_dashboard_backup.json', 'application/json');
+        setStatus('JSON backup exported.');
+      }
+
+      function importJsonBackup(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+          try {
+            const imported = JSON.parse(reader.result);
+            if (!Array.isArray(imported.records)) throw new Error('records array missing');
+            records = imported.records.map((record) => normalizeRecord(record));
+            persistRecords();
+            renderDashboard();
+            setStatus('JSON backup imported.');
+          } catch (error) {
+            setStatus('Import failed: ' + error.message);
+          } finally {
+            event.target.value = '';
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function exportInventoryCsv() {
+        exportCsv(records, 'shr_dashboard_inventory.csv');
+        setStatus('Inventory CSV exported.');
+      }
+
+      function exportDiscrepancyCsv() {
+        const discrepancies = records.filter((record) => record.discrepancy_status || record.is_missing_from_latest || !record.assignee || !hasLocation(record));
+        exportCsv(discrepancies, 'shr_dashboard_discrepancies.csv');
+        setStatus('Discrepancies CSV exported.');
+      }
+
+      function exportCsv(source, filename) {
+        const columns = [
+          'record_key',
+          'lin',
+          'nsn',
+          'nsn_description',
+          'serial_number',
+          'oh_qty',
+          'assignee',
+          'sub_holder',
+          'location_area',
+          'location_building',
+          'location_room',
+          'location_container',
+          'discrepancy_status',
+          'labels',
+          'notes',
+          'last_reviewed_at',
+          'is_new',
+          'is_missing_from_latest'
+        ];
+        const lines = [columns.join(',')].concat(source.map((record) => (
+          columns.map((column) => csvCell(Array.isArray(record[column]) ? record[column].join('; ') : record[column])).join(',')
+        )));
+        downloadFile(lines.join('\n'), filename, 'text/csv');
+      }
+
+      function clearLocalChanges() {
+        if (!confirm('Clear local edits for this dashboard file?')) return;
+        localStorage.removeItem(storageKey);
+        records = (payload.records || []).map((record) => normalizeRecord(record));
+        renderDashboard();
+        setStatus('Local changes cleared.');
+      }
+
+      function downloadFile(content, filename, type) {
+        const blob = new Blob([content], { type: type });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function csvCell(value) {
+        const text = String(value == null ? '' : value);
+        return '"' + text.replaceAll('"', '""') + '"';
+      }
+
+      function setText(id, value) {
+        document.getElementById(id).textContent = String(value);
+      }
+
+      function setStatus(message) {
+        const status = document.getElementById('save-status');
+        if (status) status.textContent = message;
+      }
+
+      function escapeHtml(value) {
+        return String(value == null ? '' : value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+      }
+
+      function escapeAttribute(value) {
+        return escapeHtml(value).replaceAll('\n', '&#10;');
+      }
+    }());
+  </script>
+</body>
+</html>
